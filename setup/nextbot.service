@@ -1,0 +1,14 @@
+[Unit]
+Description=Discord Administration Bot
+After=local-fs.target network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/nextbot start
+ExecStop=/usr/bin/nextbot stop
+User=discordbot
+Group=discordbot
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
