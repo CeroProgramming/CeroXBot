@@ -1,0 +1,10 @@
+.idea/
+*.pyc
+~*/
+
+
+discord.log
+config/options.ini
+config/permissions.ini
+bot/__pycache__
+tmp
