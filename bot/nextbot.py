@@ -34,7 +34,7 @@ from collections import defaultdict
 from bot.config import Config, ConfigDefaults
 from bot.permissions import Permissions, PermissionsDefaults
 from bot.utils import load_file, write_file, sane_round_int
-from bot.jsonformatter import JsonFormatter
+from bot.jsonparser import JsonParser
 
 from . import exceptions
 from .constants import VERSION as BOTVERSION
@@ -69,14 +69,48 @@ class Response:
 
 
 class NextBot(discord.Client):
-    def __init__(self, config_file=ConfigDefaults.options_file, perms_file=PermissionsDefaults.perms_file):
-        self.players = {}
+    def __init__(self, perms_file=PermissionsDefaults.perms_file):
         self.locks = defaultdict(asyncio.Lock)
         self.end = False
-        self.config = Config(config_file)
-        self.permissions = Permissions(perms_file, grant_all=[self.config.owner_id])
 
-        self.blacklist = set(load_file(self.config.blacklist_file))
+        self.options_file = "options.json"
+        self.optionsdata = JsonParser.importer(self.options_file)
+        if self.optionsdata == "ErrorNoFileFound":
+            safe_print("Your config files are missing.  Neither options.json nor example_options.json were found.,\n \
+            Grab the files back from the archive or remake them yourself and copy paste the content \n \
+            from the repo.  Stop removing important files!")
+            raise exceptions.TerminateSignal
+
+        self._login_token = self.optionsdata["options"]["bot"]["Token"]
+        while self._login_token == "000000000000000000000000000000000000000000000":
+            self._login_token = str(input("What is the token for the bot? "))
+            self.optionsdata["options"]["bot"]["Token"] = self._login_token
+            JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.auth = (self._login_token,)
+
+        self.owner_id = self.optionsdata["options"]["bot"]["OwnerID"]
+        while self.owner_id == "000000000000000000":
+            self.owner_id = str(input("What is the OwnerID? "))
+            self.optionsdata["options"]["bot"]["OwnerID"] = self.owner_id
+            JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.command_prefix = self.optionsdata["options"]["settings"]["CommandPrefix"]
+        while self.command_prefix == "NotAPrefix":
+            self.command_prefix = str(input("What prefix do you prefer? (example: !) "))
+            self.optionsdata["options"]["settings"]["CommandPrefix"] = self.command_prefix
+            JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.logger = self.optionsdata["options"]["debug"]["Logger"]
+        self.logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
+
+
+
+
+
+        #TODO Add a blacklist function for users to be able to use absolutly none command
+
+        self.permissions = Permissions(perms_file, grant_all=[self.owner_id])
 
         self.exit_signal = None
         self.init_ok = False
@@ -94,7 +128,7 @@ class NextBot(discord.Client):
         self.timer = 0
 
         self.games_file = "games.json"
-        self.gamesdata = JsonFormatter.importer(self.games_file)
+        self.gamesdata = JsonParser.importer(self.games_file)
         if self.gamesdata == "ErrorNoFileFound":
             safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
             Grab the files back from the archive or remake them yourself and copy paste the content \n \
@@ -109,7 +143,7 @@ class NextBot(discord.Client):
             # Only allow the owner to use these commands
             orig_msg = _get_variable('message')
 
-            if not orig_msg or orig_msg.author.id == self.config.owner_id:
+            if not orig_msg or orig_msg.author.id == self.owner_id:
                 return await func(self, *args, **kwargs)
             else:
                 raise exceptions.PermissionsError("Only the owner can use this command..", expire_in=30)
@@ -127,10 +161,10 @@ class NextBot(discord.Client):
             for server in self.servers:
                 for channel in server.channels:
                     for m in channel.voice_members:
-                        if m.id == self.config.owner_id:
+                        if m.id == self.owner_id:
                             return m
         else:
-            return discord.utils.find(lambda m: m.id == self.config.owner_id, self.get_all_members())
+            return discord.utils.find(lambda m: m.id == self.owner_id, self.get_all_members())
 
 
     async def _wait_delete_msg(self, message, after):
@@ -203,15 +237,13 @@ class NextBot(discord.Client):
         try:
             return await super().send_typing(destination)
         except discord.Forbidden:
-            if self.config.debug_mode:
+            if self.logger == "DEBUG":
                 print("Could not send typing to %s, no permssion" % destination)
 
 
     async def edit_profile(self, **fields):
-        if self.user.bot:
-            return await super().edit_profile(**fields)
-        else:
-            return await super().edit_profile(self.config._password,**fields)
+        return await super().edit_profile(**fields)
+
 
 
     def _cleanup(self):
@@ -234,7 +266,7 @@ class NextBot(discord.Client):
     # noinspection PyMethodOverriding
     def run(self):
         try:
-            self.loop.run_until_complete(self.start(*self.config.auth))
+            self.loop.run_until_complete(self.start(*self.auth))
 
         except discord.errors.LoginFailure:
             # Add if token, else
@@ -268,7 +300,7 @@ class NextBot(discord.Client):
 
         print('')
         print('-----------------------------------------------------\n')
-        if self.config.owner_id == self.user.id:
+        if self.owner_id == self.user.id:
             raise exceptions.HelpfulError(
                 "Your OwnerID is incorrect or you've used the wrong credentials.",
 
@@ -288,7 +320,7 @@ class NextBot(discord.Client):
             [self.safe_print(' - ' + s.name) for s in self.servers]
 
         elif self.servers:
-            print("Owner could not be found on any server (id: %s)\n" % self.config.owner_id)
+            print("Owner could not be found on any server (id: %s)\n" % self.owner_id)
 
             print('Server List:')
             [self.safe_print(' - ' + s.name) for s in self.servers]
@@ -310,9 +342,9 @@ class NextBot(discord.Client):
         #TODO Expand Options
         print("Options:")
 
-        self.safe_print("  Command prefix: " + self.config.command_prefix)
-        self.safe_print("  Logging Level: " + self.config.logger)
-        self.safe_print("  Log to file: " + self.config.logtofile)
+        self.safe_print("  Command prefix: " + self.command_prefix)
+        self.safe_print("  Logging Level: " + self.logger)
+        self.safe_print("  Log to file: " + self.logtofile)
 
         print()
         print('-----------------------------------------------------\n')
@@ -331,10 +363,10 @@ class NextBot(discord.Client):
 
         message_content = message.content.strip()
 
-        if not message_content.startswith(self.config.command_prefix):
+        if not message_content.startswith(self.command_prefix):
             if (message.content).lower().replace("?","") == 'what is the prefix':
-                command_prefix=self.config.command_prefix
-                await self.send_message(message.channel, "The prefix is set to %s" % self.config.command_prefix)
+                command_prefix=self.command_prefix
+                await self.send_message(message.channel, "The prefix is set to %s" % self.command_prefix)
                 return
             elif (message.content).lower() == "hi" or (message.content).lower() == "hello" or (message.content).lower() == "hallo":
                 await self.send_message(message.channel, 'Hello {0.author.mention}'.format(message))
@@ -351,7 +383,7 @@ class NextBot(discord.Client):
 
 
         command, *args = message_content.split()  # Uh, doesn't this break prefixes with spaces in them (it doesn't, config parser already breaks them)
-        command = command[len(self.config.command_prefix):].lower().strip()
+        command = command[len(self.command_prefix):].lower().strip()
 
         #TODO Fix commad alternatives
         '''if command == "crchannel" or command == "crc":
@@ -371,16 +403,16 @@ class NextBot(discord.Client):
             return
 
         if message.channel.is_private:
-            if not (message.author.id == self.config.owner_id and command == 'joinserver'):
+            if not (message.author.id == self.owner_id and command == 'joinserver'):
                 await self.send_message(message.channel, 'You cannot use this bot in private messages.')
                 return
 
-        if message.author.id in self.blacklist and message.author.id != self.config.owner_id:
+        """if message.author.id in self.blacklist and message.author.id != self.owner_id:
             self.safe_print("[User blacklisted] {0.id}/{0.name} ({1})".format(message.author, message_content))
             return
 
-        else:
-            self.safe_print("[Command] {0.id}/{0.name} ({1})".format(message.author, message_content))
+        else:"""
+        self.safe_print("[Command] {0.id}/{0.name} ({1})".format(message.author, message_content))
 
         user_permissions = self.permissions.for_user(message.author)
 
@@ -432,7 +464,7 @@ class NextBot(discord.Client):
                     handler_kwargs[key] = arg_value
                     params.pop(key)
 
-            if message.author.id != self.config.owner_id:
+            if message.author.id != self.owner_id:
                 if user_permissions.command_whitelist and command not in user_permissions.command_whitelist:
                     raise exceptions.PermissionsError(
                         "This command is not enabled for your group (%s)." % user_permissions.name,
@@ -447,7 +479,7 @@ class NextBot(discord.Client):
                 docs = getattr(handler, '__doc__', None)
                 if not docs:
                     docs = 'Usage: {}{} {}'.format(
-                        self.config.command_prefix,
+                        self.command_prefix,
                         command,
                         ' '.join(args_expected)
                     )
@@ -455,7 +487,7 @@ class NextBot(discord.Client):
                 docs = '\n'.join(l.strip() for l in docs.split('\n'))
                 await self.safe_send_message(
                     message.channel,
-                    '```\n%s\n```' % docs.format(command_prefix=self.config.command_prefix),
+                    '```\n%s\n```' % docs.format(command_prefix=self.command_prefix),
                     expire_in=60
                 )
                 return
@@ -476,14 +508,12 @@ class NextBot(discord.Client):
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
             print("{0.__class__}: {0.message}".format(e))
 
-            expirein = e.expire_in if self.config.delete_messages else None
-            alsodelete = message if self.config.delete_invoking else None
 
             await self.safe_send_message(
                 message.channel,
                 '```\n%s\n```' % e.message,
-                expire_in=expirein,
-                also_delete=alsodelete
+                None,
+                None
             )
 
         except exceptions.Signal:
@@ -519,9 +549,15 @@ class NextBot(discord.Client):
 
         #Check the game that is played
         if before.game != after.game and after.game != None:
-            if JsonFormatter.existnotmember(self.gamesdata, after.game.name.lower(), after.id):
-                JsonFormatter.addautomember(self.gamesdata, after.game.name.lower(), after.id)
-                JsonFormatter.exporter(self.gamesdata, self.games_file)
+            if JsonParser.existnotmember(self.gamesdata, after.game.name.lower(), after.id):
+                for game in list(self.gamesdata["games"].keys()):
+                    try:
+                        self.gamesdata["games"][game]["altnames"].index(after.game.name.lower())
+                        self.gamesdata["games"][game]["members"].append(after.id)
+                        return data
+                    except:
+                        pass
+                JsonParser.exporter(self.gamesdata, self.games_file)
 
 
         elif before.game != after.game and after.game != None and self.statustimer == 2:
@@ -534,7 +570,7 @@ class NextBot(discord.Client):
     async def on_server_join(self, server):
         for server in self.servers:
             for member in server.members:
-                if member.id == self.config.owner_id:
+                if member.id == self.owner_id:
                     owner = member
 
         await self.send_message(owner, ("I has been added to "))
@@ -559,7 +595,7 @@ class NextBot(discord.Client):
                 return Response(
                     "```\n{}```".format(
                         dedent(cmd.__doc__),
-                        command_prefix=self.config.command_prefix
+                        command_prefix=self.command_prefix
                     ),
                     delete_after=60
                 )
@@ -578,7 +614,7 @@ class NextBot(discord.Client):
                         delete = False
                 if att.startswith('cmd_') and delete == True:
                     command_name = att.replace('cmd_', '').lower()
-                    commands.append("{}{}".format(self.config.command_prefix, command_name))
+                    commands.append("{}{}".format(self.command_prefix, command_name))
 
             helpmsg += "\n".join(commands)
             helpmsg += "```"
@@ -604,7 +640,7 @@ class NextBot(discord.Client):
                 return Response(
                     "```\n{}```".format(
                         dedent(cmd.__doc__),
-                        command_prefix=self.config.command_prefix
+                        command_prefix=self.command_prefix
                     ),
                     delete_after=60
                 )
@@ -623,7 +659,7 @@ class NextBot(discord.Client):
                         delete = False
                 if att.startswith('cmd_') and delete == True:
                     command_name = att.replace('cmd_', '').lower()
-                    commands.append("{}{}".format(self.config.command_prefix, command_name))
+                    commands.append("{}{}".format(self.command_prefix, command_name))
 
             helpmsg += "\n".join(commands)
             helpmsg += "```"
@@ -1611,63 +1647,7 @@ class NextBot(discord.Client):
             else:
                 return Response("The stopwatch isn't running.", delete_after=60)
         else:
-            return Response("Cannot recognize you're command. Use %sstopwatch start/stop/status or %shelp stopwatch to see the help." % (self.config.command_prefix,self.config.command_prefix), delete_after=30)
-
-
-    async def cmd_blacklist(self, message, user_mentions, option, something): #TODO Replacing with database?
-        """
-        Usage:
-            {command_prefix}blacklist [ + | - | add | remove ] @UserName [@UserName2 ...]
-
-        Add or remove users to the blacklist.
-        Blacklisted users are forbidden from using bot commands.
-        """
-
-        if message.channel.name == "bot-control":
-            return
-
-        if not user_mentions:
-            raise exceptions.CommandError("No users listed.", expire_in=20)
-
-        if option not in ['+', '-', 'add', 'remove']:
-            raise exceptions.CommandError(
-                'Invalid option "%s" specified, use +, -, add, or remove' % option, expire_in=20
-            )
-
-        for user in user_mentions.copy():
-            if user.id == self.config.owner_id:
-                print("[Commands:Blacklist] The owner cannot be blacklisted.")
-                user_mentions.remove(user)
-
-        old_len = len(self.blacklist)
-
-        if option in ['+', 'add']:
-            self.blacklist.update(user.id for user in user_mentions)
-
-            write_file(self.config.blacklist_file, self.blacklist)
-
-            return Response(
-                '%s users have been added to the blacklist' % (len(self.blacklist) - old_len),
-                reply=True, delete_after=10
-            )
-
-        else:
-            if self.blacklist.isdisjoint(user.id for user in user_mentions):
-                return Response('none of those users are in the blacklist.', reply=True, delete_after=10)
-
-            else:
-                self.blacklist.difference_update(user.id for user in user_mentions)
-                write_file(self.config.blacklist_file, self.blacklist)
-
-                return Response(
-                    '%s users have been removed from the blacklist' % (old_len - len(self.blacklist)),
-                    reply=True, delete_after=10
-                )
-
-
-
-
-
+            return Response("Cannot recognize you're command. Use %sstopwatch start/stop/status or %shelp stopwatch to see the help." % (self.command_prefix,self.command_prefix), delete_after=30)
 
 
 
@@ -1701,34 +1681,41 @@ class NextBot(discord.Client):
 
     async def cmd_addgame(self, message, game):
         game = game.lower()
-        self.gamesdata = JsonFormatter.addgame(self.gamesdata, game)
-        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        gamedict = dict()
+        gamedict = {"name": game, "altnames": [game], "members": []}
+        self.gamesdata["games"].__setitem__(game, gamedict)
+
+        JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Game %s was added to the games file :space_invader:" % game, delete_after=15)
 
     async def cmd_rmgame(self, message, game):
         game = game.lower()
-        self.gamesdata = JsonFormatter.removegame(self.gamesdata, game)
-        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        self.gamesdata["games"].__delitem__(game)
+
+        JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Game %s was removed from the games file :space_invader:" % game, delete_after=15)
 
-    async def cmd_addaltname(self, messaalge, game, name):
+    async def cmd_addaltname(self, message, game, name):
         game = game.lower()
         name = name.lower()
-        self.gamesdata = JsonFormatter.addaltname(self.gamesdata, game, name)
-        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        self.gamesdata["games"][game]["altnames"].append(name)
+
+        JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Name %s was added to the game %s :space_invader:" % (name, game), delete_after=15)
 
     async def cmd_rmaltname(self, message, game, name):
         game = game.lower()
         name = name.lower()
-        self.gamesdata = JsonFormatter.removealtname(self.gamesdata, game, name)
-        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        self.gamesdata["games"][game]["altnames"].remove(name)
+
+        JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Name %s was removed from the game %s :space_invader:" % (name, game), delete_after=15)
 
     async def cmd_addmember(self, message, game, memberid):
         game = game.lower()
-        self.gamesdata = JsonFormatter.addmember(self.gamesdata, game, memberid)
-        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        self.gamesdata["games"][game]["members"].append(memberid)
+
+        JsonParser.exporter(self.gamesdata, self.games_file)
         try:
             return Response("Member %s was added to the game %s :space_invader:" % (message.server.get_member(memberid), game), delete_after=15)
         except:
@@ -1736,23 +1723,24 @@ class NextBot(discord.Client):
 
     async def cmd_rmmember(self, message, game, memberid):
         game = game.lower()
-        self.gamesdata = JsonFormatter.removemember(self.gamesdata, game, memberid)
-        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        self.gamesdata["games"][game]["members"].remove(memberid)
+
+        JsonParser.exporter(self.gamesdata, self.games_file)
         try:
             return Response("Member %s was removed from the game %s :space_invader:" % (message.server.get_member(memberid), game), delete_after=15)
         except:
             return Response("Member %s was removed from the game %s :space_invader:" % (memberid, game), delete_after=15)
 
     async def cmd_listgames(self, message):
-        return Response(JsonFormatter.listgames(self.gamesdata), delete_after=25)
+        return Response(", ".join(list(self.gamesdata["games"].keys())), delete_after=25)
 
     async def cmd_listaltgames(self, message, game):
         game = game.lower()
-        return Response(JsonFormatter.listaltnames(self.gamesdata, game), delete_after=25)
+        return Response(", ".join(self.gamesdata["games"][game]["altnames"]), delete_after=25)
 
     async def cmd_listmembers(self, message, game):
         game = game.lower()
-        memberslist = JsonFormatter.listmembers(self.gamesdata, game)
+        memberslist = self.gamesdata["games"][game]["members"]
         members = ", ".join(memberslist)
         for memb in memberslist:
             try:

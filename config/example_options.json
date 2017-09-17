@@ -1,0 +1,16 @@
+{
+  "options": {
+    "bot": {
+      "Token": "000000000000000000000000000000000000000000000",
+      "OwnerID": "000000000000000000"
+    },
+    "settings": {
+      "CommandPrefix": "NotAPrefix",
+      "BindToChannels": "None"
+    },
+    "debug": {
+      "Logger": "DEBUG",
+      "LogToFile": "True"
+    }
+  }
+}
