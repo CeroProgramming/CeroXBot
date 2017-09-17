@@ -6,5 +6,6 @@
 discord.log
 config/options.ini
 config/permissions.ini
+config/games.json
 bot/__pycache__
 tmp

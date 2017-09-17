@@ -34,15 +34,31 @@ from collections import defaultdict
 from bot.config import Config, ConfigDefaults
 from bot.permissions import Permissions, PermissionsDefaults
 from bot.utils import load_file, write_file, sane_round_int
+from bot.jsonformatter import JsonFormatter
 
 from . import exceptions
 from .constants import VERSION as BOTVERSION
 
+
+config = Config(ConfigDefaults.options_file)
 logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
+if config.logger == "DEBUG":
+    logger.setLevel(logging.DEBUG)
+elif config.logger == "INFO":
+    logger.setLevel(logging.INFO)
+elif config.logger == "WARNING":
+    logger.setLevel(logging.WARNING)
+elif config.logger == "ERROR":
+    logger.setLevel(logging.ERROR)
+elif config.logger == "CRITICAL":
+    logger.setLevel(logging.CRITICAL)
+else:
+    logger.setLevel(logging.NOTSET)
+
+if config.logtofile == "True":
+    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    logger.addHandler(handler)
 
 
 class Response:
@@ -77,51 +93,17 @@ class NextBot(discord.Client):
 
         self.timer = 0
 
+        self.games_file = "games.json"
+        self.gamesdata = JsonFormatter.importer(self.games_file)
+        if self.gamesdata == "ErrorNoFileFound":
+            safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
+            Grab the files back from the archive or remake them yourself and copy paste the content \n \
+            from the repo.  Stop removing important files!")
+            raise exceptions.TerminateSignal
 
-        #FIXME Logger level
-        """
-        if self.config.logtofile == True:
-
-            logger = logging.getLogger('discord')
-
-
-            if self.config.logger == "DEBUG":
-                logger.setLevel(logging.DEBUG)
-            elif self.config.logger == "INFO":
-                logger.setLevel(logging.INFO)
-            elif self.config.logger == "WARNING":
-                logger.setLevel(logging.WARNING)
-            elif self.config.logger == "ERROR":
-                logger.setLevel(logging.ERROR)
-            elif self.config.logger == "CRITICAL":
-                logger.setLevel(logging.CRITICAL)
-            else:
-                logger.setLevel(logging.NOTSET)
-
-                handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-                handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-                logger.addHandler(handler)
-        #FIXME Output to console
-        elif self.config.logtofile == False:
-            if self.config.logger == "DEBUG":
-                logging.basicConfig(level=logging.DEBUG)
-            elif self.config.logger == "INFO":
-                logging.basicConfig(level=logging.INFO)
-            elif self.config.logger == "WARNING":
-                logging.basicConfig(level=logging.WARNING)
-            elif self.config.logger == "ERROR":
-                logging.basicConfig(level=logging.ERROR)
-            elif self.config.logger == "CRITICAL":
-                logging.basicConfig(level=logging.CRITICAL)
-            else:
-                logging.basicConfig(level=logging.NOTSET)
-
-        else:
-            pass
-    """
 
     # TODO: Add some sort of `denied` argument for a message to send when someone else tries to use it
-    def owner_only(func):
+    def owner_only(func, *args):
         @wraps(func)
         async def wrapper(self, *args, **kwargs):
             # Only allow the owner to use these commands
@@ -371,7 +353,20 @@ class NextBot(discord.Client):
         command, *args = message_content.split()  # Uh, doesn't this break prefixes with spaces in them (it doesn't, config parser already breaks them)
         command = command[len(self.config.command_prefix):].lower().strip()
 
+        #TODO Fix commad alternatives
+        '''if command == "crchannel" or command == "crc":
+            command == "createchannel"
+        elif command == "createpchannel" or command == "crpchannel" or command == "crpc":
+            command == "createprivatechannel"
+        elif command == "createvchannel" or command == "crvchannel" or command == "crvc":
+            command == "createvoicechannel"
+        elif command == "createpvoicechannel" or command == "createprivatevchannel" or command == "crprivatevchannel" or command == "crvprivatechannel" or command == "crpvoicechannel" or command == "crvoicepchannel" or command == "crpvchannel" or command == "crvpchannel" or command == "crvpc" or command == "crpvc"\
+         or command == "createvoiceprivatechannel":
+            command == "createprivatevoicechannel"'''
+
+
         handler = getattr(self, 'cmd_%s' % command, None)
+
         if not handler:
             return
 
@@ -523,58 +518,10 @@ class NextBot(discord.Client):
     async def on_member_update(self, before, after):
 
         #Check the game that is played
-        if before.game != after.game and after.game != None and self.statustimer == 0:
-            self.statustimer = 2
-            config = configparser.ConfigParser(interpolation=None)
-            config.read(self.config.game_file, encoding='utf-8')
-            playedgame = None
-            partof = False
-            gameexist = False
-            #Researches all registered games
-            for game in self.config.allgamenames:
-                #Check if members game is registered
-                if after.game.name == game:
-                    gameexist = True
-                    #Researches all sections
-                    for section in config.sections():
-                        #Check to which game the name is depend on
-                        namesraw = config.get(section, "names")
-                        nameslist = namesraw.split(", ")
-                        for name in nameslist:
-                            if after.game.name == name:
-                                membersraw = config.get(section, "members", fallback="")
-                                memberslist = membersraw.split(", ")
-                                for member in memberslist:
-                                    if after.name == member:
-                                        partof = True
-                                        break
-                                sectionsave = section
-
-            if partof == False and gameexist == True:
-                searchline = "[" + sectionsave + "]\n"
-                gameconfig = open(self.config.game_file, "r")
-                gamesfilecontent = gameconfig.readlines()
-                line = False
-                for i in range(len(gamesfilecontent)):
-                    if searchline == gamesfilecontent[i]:
-                        line = i+2
-                        break
-                gameconfig.close()
-                gameconfig = open(self.config.game_file, "w")
-                length = len(gamesfilecontent[line])
-                if (gamesfilecontent[line])[length-3:length] == "= \n":
-                    writecontent = gamesfilecontent[line] + after.name
-                elif (gamesfilecontent[line])[length-2:length] == "=\n":
-                    writecontent = gamesfilecontent[line] + " " + after.name
-                else:
-                    writecontent = gamesfilecontent[line] + ", " + after.name
-                writecontent = writecontent.replace("\n", "")
-                writecontent += "\n"
-                gamesfilecontent[line] = writecontent
-
-                gameconfig.writelines(gamesfilecontent)
-                gameconfig.close()
-
+        if before.game != after.game and after.game != None:
+            if JsonFormatter.existnotmember(self.gamesdata, after.game.name.lower(), after.id):
+                JsonFormatter.addautomember(self.gamesdata, after.game.name.lower(), after.id)
+                JsonFormatter.exporter(self.gamesdata, self.games_file)
 
 
         elif before.game != after.game and after.game != None and self.statustimer == 2:
@@ -947,13 +894,14 @@ class NextBot(discord.Client):
     ####################################################Channel Management#######################################################
 
 
-    async def cmd_crchannel(self, message, name):
+    async def cmd_createchannel(self, message, name):
         """
         Usage:
-            {command_prefix}crchannel name
+            {command_prefix}createchannel name
 
         Creates a channel
         Text-only
+        Alternatives: crchannel, crc
         """
         #TODO Add support for ä ö ü ß – fixed?
 
@@ -963,7 +911,7 @@ class NextBot(discord.Client):
         return Response("Channel successful created!", delete_after=30)
 
 
-    async def cmd_crpchannel(self, message, name):
+    async def cmd_createprivatechannel(self, message, name):
         """
         Usage:
             {command_prefix}crpchannel name
@@ -971,6 +919,7 @@ class NextBot(discord.Client):
         Creates a private channel
         WARNING: Private channel creation works not at the moment!
         Text-only
+        Alternatives: createpchannel, crpchannel, crpc
         """
 
         allowaccess = discord.PermissionOverwrite(read_messages=True)
@@ -988,13 +937,14 @@ class NextBot(discord.Client):
         return Response("Not usable in this version", delete_after=30)
 
 
-    async def cmd_crvchannel(self, message, leftover_args):
+    async def cmd_createvoicechannel(self, message, leftover_args):
         """
         Usage:
             {command_prefix}crvchannel name
 
         Creates a channel
         Voice-only
+        Alternatives: createvchannel, crvchannel, crvc
         """
 
         kind = discord.ChannelType.voice
@@ -1010,7 +960,7 @@ class NextBot(discord.Client):
         return Response("Voice-channel successful created!", delete_after=30)
 
 
-    async def cmd_crpvchannel(self, message, leftover_args):
+    async def cmd_createprivatevoicechannel(self, message, leftover_args):
         """
         Usage:
             {command_prefix}crpvchannel name
@@ -1018,6 +968,7 @@ class NextBot(discord.Client):
         Creates a private voice channel
         WARNING: Private channel creation works not at the moment!
         Voice-only
+        Alternatives: createpvoicechannel, createprivatevchannel, crpvchannel, crpvc
         """
 
         allowaccess = discord.PermissionOverwrite(read_messages=True)
@@ -1748,9 +1699,67 @@ class NextBot(discord.Client):
     ######################################################Please insert here######################################################
 
 
-    async def cmd_addgame(self, message, name):
+    async def cmd_addgame(self, message, game):
+        game = game.lower()
+        self.gamesdata = JsonFormatter.addgame(self.gamesdata, game)
+        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        return Response("Game %s was added to the games file :space_invader:" % game, delete_after=15)
 
-        pass
+    async def cmd_rmgame(self, message, game):
+        game = game.lower()
+        self.gamesdata = JsonFormatter.removegame(self.gamesdata, game)
+        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        return Response("Game %s was removed from the games file :space_invader:" % game, delete_after=15)
+
+    async def cmd_addaltname(self, messaalge, game, name):
+        game = game.lower()
+        name = name.lower()
+        self.gamesdata = JsonFormatter.addaltname(self.gamesdata, game, name)
+        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        return Response("Name %s was added to the game %s :space_invader:" % (name, game), delete_after=15)
+
+    async def cmd_rmaltname(self, message, game, name):
+        game = game.lower()
+        name = name.lower()
+        self.gamesdata = JsonFormatter.removealtname(self.gamesdata, game, name)
+        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        return Response("Name %s was removed from the game %s :space_invader:" % (name, game), delete_after=15)
+
+    async def cmd_addmember(self, message, game, memberid):
+        game = game.lower()
+        self.gamesdata = JsonFormatter.addmember(self.gamesdata, game, memberid)
+        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        try:
+            return Response("Member %s was added to the game %s :space_invader:" % (message.server.get_member(memberid), game), delete_after=15)
+        except:
+            return Response("Member %s was added to the game %s :space_invader:" % (memberid, game), delete_after=15)
+
+    async def cmd_rmmember(self, message, game, memberid):
+        game = game.lower()
+        self.gamesdata = JsonFormatter.removemember(self.gamesdata, game, memberid)
+        JsonFormatter.exporter(self.gamesdata, self.games_file)
+        try:
+            return Response("Member %s was removed from the game %s :space_invader:" % (message.server.get_member(memberid), game), delete_after=15)
+        except:
+            return Response("Member %s was removed from the game %s :space_invader:" % (memberid, game), delete_after=15)
+
+    async def cmd_listgames(self, message):
+        return Response(JsonFormatter.listgames(self.gamesdata), delete_after=25)
+
+    async def cmd_listaltgames(self, message, game):
+        game = game.lower()
+        return Response(JsonFormatter.listaltnames(self.gamesdata, game), delete_after=25)
+
+    async def cmd_listmembers(self, message, game):
+        game = game.lower()
+        memberslist = JsonFormatter.listmembers(self.gamesdata, game)
+        members = ", ".join(memberslist)
+        for memb in memberslist:
+            try:
+                members = members.replace(memb, message.server.get_member(memb).name)
+            except:
+                pass
+        return Response(members, delete_after=25)
 
 
 

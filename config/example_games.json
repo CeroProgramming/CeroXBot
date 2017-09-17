@@ -1,0 +1,34 @@
+{
+  "games": {
+    "minecraft": {
+      "name": "minecraft",
+      "altnames": [
+        "minecraft"
+      ],
+      "members": [
+        "000000000000000000"
+      ]
+    },
+    "overwatch": {
+      "name": "overwatch",
+      "altnames": [
+        "overwatch",
+        "ow"
+      ],
+      "members": [
+        "000000000000000000"
+      ]
+    },
+    "leagueoflegends": {
+      "name": "leagueoflegends",
+      "altnames": [
+        "leagueoflegends",
+        "lol",
+        "league"
+      ],
+      "members": [
+        "000000000000000000"
+      ]
+    }
+  }
+}
