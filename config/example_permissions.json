@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "Default": {
+      "_comment": "Don't use whitelist and blacklist at the same time, as whitelist will overwrite blacklist if used",
+      "CommandWhitelist":"id help count countall shortcuts sleep stopwatch",
+      "CommandBlacklist":"",
+      "GrantToRoles": "",
+      "UserList": ""
+    },
+    "Creator": {
+      "_comment": "Don't use whitelist and blacklist at the same time, as whitelist will overwrite blacklist if used",
+      "CommandWhitelist":"addgame count countall crchannel crpchannel crvchannel crtempchannel crpvchannel dump edbitrate edchannel edlimit edname edtopic edvchannel edvname edvtopic help id shortcuts sleep stopwatch",
+      "CommandBlacklist":"",
+      "GrantToRoles": "",
+      "UserList": ""
+    },
+    "Maker": {
+      "_comment": "Don't use whitelist and blacklist at the same time, as whitelist will overwrite blacklist if used",
+      "CommandWhitelist":"",
+      "CommandBlacklist":"blacklist listids setnick setname setavatar restart shutdown perms",
+      "GrantToRoles": "",
+      "UserList": ""
+    },
+    "Master": {
+      "_comment": "Don't use whitelist and blacklist at the same time, as whitelist will overwrite blacklist if used",
+      "CommandWhitelist":"",
+      "CommandBlacklist":"",
+      "GrantToRoles": "",
+      "UserList": ""
+    }
+  }
+}

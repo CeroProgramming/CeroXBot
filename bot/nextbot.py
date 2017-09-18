@@ -31,8 +31,7 @@ from random import choice, shuffle
 from collections import defaultdict
 
 
-from bot.config import Config, ConfigDefaults
-from bot.permissions import Permissions, PermissionsDefaults
+from bot.permissionparser import PermissionParser
 from bot.utils import load_file, write_file, sane_round_int
 from bot.jsonparser import JsonParser
 
@@ -40,22 +39,22 @@ from . import exceptions
 from .constants import VERSION as BOTVERSION
 
 
-config = Config(ConfigDefaults.options_file)
+optionsdata = JsonParser.importer("options.json")
 logger = logging.getLogger('discord')
-if config.logger == "DEBUG":
+if optionsdata["options"]["debug"]["Logger"] == "DEBUG":
     logger.setLevel(logging.DEBUG)
-elif config.logger == "INFO":
+elif optionsdata["options"]["debug"]["Logger"] == "INFO":
     logger.setLevel(logging.INFO)
-elif config.logger == "WARNING":
+elif optionsdata["options"]["debug"]["Logger"] == "WARNING":
     logger.setLevel(logging.WARNING)
-elif config.logger == "ERROR":
+elif optionsdata["options"]["debug"]["Logger"] == "ERROR":
     logger.setLevel(logging.ERROR)
-elif config.logger == "CRITICAL":
+elif optionsdata["options"]["debug"]["Logger"] == "CRITICAL":
     logger.setLevel(logging.CRITICAL)
 else:
     logger.setLevel(logging.NOTSET)
 
-if config.logtofile == "True":
+if optionsdata["options"]["debug"]["LogToFile"] == "True":
     handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
     handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
     logger.addHandler(handler)
@@ -69,7 +68,7 @@ class Response:
 
 
 class NextBot(discord.Client):
-    def __init__(self, perms_file=PermissionsDefaults.perms_file):
+    def __init__(self):
         self.locks = defaultdict(asyncio.Lock)
         self.end = False
 
@@ -104,13 +103,19 @@ class NextBot(discord.Client):
         self.logger = self.optionsdata["options"]["debug"]["Logger"]
         self.logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
 
+        self.perms_file = "permissions.json"
+        self.permsdata = JsonParser.importer(self.perms_file)
+        if self.optionsdata == "ErrorNoFileFound":
+            safe_print("Your config files are missing.  Neither options.json nor example_options.json were found.,\n \
+            Grab the files back from the archive or remake them yourself and copy paste the content \n \
+            from the repo.  Stop removing important files!")
+            raise exceptions.TerminateSignal
+
 
 
 
 
         #TODO Add a blacklist function for users to be able to use absolutly none command
-
-        self.permissions = Permissions(perms_file, grant_all=[self.owner_id])
 
         self.exit_signal = None
         self.init_ok = False
@@ -412,9 +417,10 @@ class NextBot(discord.Client):
             return
 
         else:"""
+
         self.safe_print("[Command] {0.id}/{0.name} ({1})".format(message.author, message_content))
 
-        user_permissions = self.permissions.for_user(message.author)
+        userpermsgroup = PermissionParser.uservalidate(self.permsdata, message.author)
 
         argspec = inspect.signature(handler)
         params = argspec.parameters.copy()
@@ -436,7 +442,7 @@ class NextBot(discord.Client):
                 handler_kwargs['server'] = message.server
 
             if params.pop('permissions', None):
-                handler_kwargs['permissions'] = user_permissions
+                handler_kwargs['permissions'] = userpermsgroup
 
             if params.pop('user_mentions', None):
                 handler_kwargs['user_mentions'] = list(map(message.server.get_member, message.raw_mentions))
@@ -465,14 +471,14 @@ class NextBot(discord.Client):
                     params.pop(key)
 
             if message.author.id != self.owner_id:
-                if user_permissions.command_whitelist and command not in user_permissions.command_whitelist:
+                if self.permsdata["permissions"][userpermsgroup]["CommandWhitelist"] != "" and command not in self.permsdata["permissions"][userpermsgroup]["CommandWhitelist"].split(" "):
                     raise exceptions.PermissionsError(
-                        "This command is not enabled for your group (%s)." % user_permissions.name,
+                        "This command is not enabled for your group (%s)." % userpermsgroup,
                         expire_in=20)
 
-                elif user_permissions.command_blacklist and command in user_permissions.command_blacklist:
+                elif self.permsdata["permissions"][userpermsgroup]["CommandBlacklist"] != "" and command in self.permsdata["permissions"][userpermsgroup]["CommandBlacklist"].split(" "):
                     raise exceptions.PermissionsError(
-                        "This command is disabled for your group (%s)." % user_permissions.name,
+                        "This command is disabled for your group (%s)." % userpermsgroup,
                         expire_in=20)
 
             if params:
@@ -511,9 +517,7 @@ class NextBot(discord.Client):
 
             await self.safe_send_message(
                 message.channel,
-                '```\n%s\n```' % e.message,
-                None,
-                None
+                '```\n%s\n```' % e.message
             )
 
         except exceptions.Signal:
@@ -1749,6 +1753,19 @@ class NextBot(discord.Client):
                 pass
         return Response(members, delete_after=25)
 
+    async def cmd_createinvite(self, server, leftover_args):
+        if leftover_args:
+            link = await self.create_invite(server, max_age=str(int(leftover_args[0]) * 60))
+        else:
+            link = await self.create_invite(server)
+        return Response("The new invite link is: %s" % link.url)
+
+    async def cmd_createcinvite(self, channel, leftover_args):
+        if leftover_args:
+            link = await self.create_invite(channel, max_age=str(int(leftover_args[0]) * 60))
+        else:
+            link = await self.create_invite(channel)
+        return Response("The new invite link is: %s" % link.url)
 
 
 
