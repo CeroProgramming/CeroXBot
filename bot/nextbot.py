@@ -130,11 +130,17 @@ class NextBot(discord.Client):
         self.http.user_agent += ' AdminBot/%s' % BOTVERSION
         self.statustimer = 0
 
-        self.timer = 0
-
         self.games_file = "games.json"
         self.gamesdata = JsonParser.importer(self.games_file)
         if self.gamesdata == "ErrorNoFileFound":
+            safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
+            Grab the files back from the archive or remake them yourself and copy paste the content \n \
+            from the repo.  Stop removing important files!")
+            raise exceptions.TerminateSignal
+
+        self.utils_file = "utils.json"
+        self.utilsdata = JsonParser.importer(self.utils_file)
+        if self.utilsdata == "ErrorNoFileFound":
             safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
             Grab the files back from the archive or remake them yourself and copy paste the content \n \
             from the repo.  Stop removing important files!")
@@ -248,7 +254,6 @@ class NextBot(discord.Client):
 
     async def edit_profile(self, **fields):
         return await super().edit_profile(**fields)
-
 
 
     def _cleanup(self):
@@ -408,7 +413,7 @@ class NextBot(discord.Client):
             return
 
         if message.channel.is_private:
-            if not (message.author.id == self.owner_id and command == 'joinserver'):
+            if not (message.author.id == self.owner_id and (command == 'joinserver' or command == 'settoken' or command == 'setname' or command == 'setavatar' or command == 'setprefix' or command == 'setbindedchannel' or command == 'togglelogger' or command == 'setlogger' or command == 'setowner')):
                 await self.send_message(message.channel, 'You cannot use this bot in private messages.')
                 return
 
@@ -419,8 +424,10 @@ class NextBot(discord.Client):
         else:"""
 
         self.safe_print("[Command] {0.id}/{0.name} ({1})".format(message.author, message_content))
-
-        userpermsgroup = PermissionParser.uservalidate(self.permsdata, message.author)
+        if not message.author.id == self.owner_id:
+            userpermsgroup = PermissionParser.uservalidate(self.permsdata, message.author)
+        else:
+            userpermsgroup = ""
 
         argspec = inspect.signature(handler)
         params = argspec.parameters.copy()
@@ -591,8 +598,6 @@ class NextBot(discord.Client):
         If a command is specified, it prints a help message for that command.
         Otherwise, it lists the available commands.
         """
-        if message.channel.name == "bot-control":
-            return
         if command:
             cmd = getattr(self, 'cmd_' + command, None)
             if cmd:
@@ -635,8 +640,6 @@ class NextBot(discord.Client):
         If a command is specified, it prints a help message for that command.
         Otherwise, it lists the available commands.
         """
-        if message.channel.name == "bot-control":
-            return
 
         if command:
             cmd = getattr(self, 'cmd_' + command, None)
@@ -673,8 +676,6 @@ class NextBot(discord.Client):
 
     #TODO Repair restart/shutdown
     async def cmd_restart(self, message, channel):
-        if message.channel.name == "bot-control":
-            return
         #await self.safe_send_message(channel, "Wait a second :wink:")
         #raise exceptions.RestartSignal
         return Response("Not available now", delete_after=20)
@@ -682,8 +683,6 @@ class NextBot(discord.Client):
 
     #FIXME Unclosed session Error
     async def cmd_shutdown(self, message, channel):
-        if message.channel.name == "bot-control":
-            return
         await self.safe_send_message(channel, "Good bye :wave:")
         raise exceptions.TerminateSignal
 
@@ -701,8 +700,6 @@ class NextBot(discord.Client):
         Changes the bot's username.
         Note: This operation is limited by discord to twice per hour.
         """
-        if message.channel.name == "bot-control":
-            return
 
         name = ' '.join([name, *leftover_args])
 
@@ -723,8 +720,6 @@ class NextBot(discord.Client):
         Changes the bot's avatar.
         Attaching a file and leaving the url parameter blank also works.
         """
-        if message.channel.name == "bot-control":
-            return
 
         if message.attachments:
             thing = message.attachments[0]['url']
@@ -749,8 +744,6 @@ class NextBot(discord.Client):
 
         Changes the bot's nickname.
         """
-        if message.channel.name == "bot-control":
-            return
 
         if not channel.permissions_for(server.me).change_nickname:
             raise exceptions.CommandError("Unable to change nickname: no permission.")
@@ -787,10 +780,7 @@ class NextBot(discord.Client):
                 async for log in self.logs_from(message.channel, limit=300):
                     mess.append(log)
             except TypeError:
-                if message.channel.name == "bot-control":
-                    return
-                else:
-                    return Response("Bad input. Please just take integers or 'all' as argument")
+                return Response("Bad input. Please just take integers or 'all' as argument")
         for j in range(figure):
             try:
                 await self.delete_message(mess[j])
@@ -908,6 +898,7 @@ class NextBot(discord.Client):
                     await self.move_member(member, voice)
         return Response("Moved members :thumbsup:", delete_after=5)
 
+
     async def cmd_sendlog(self, message, author):
         """
         Usage:
@@ -920,6 +911,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_pin(self, message):
+        #TODO add messsage id support
         messages = []
         async for log in self.logs_from(message.channel, limit=2):
             messages.append(log)
@@ -1460,8 +1452,6 @@ class NextBot(discord.Client):
 
         Tells the user their id or the id of another user.
         """
-        if message.channel.name == "bot-control":
-            return
 
         if not user_mentions:
             return Response('your id is `%s`' % author.id, reply=True, delete_after=35)
@@ -1478,8 +1468,6 @@ class NextBot(discord.Client):
         Lists the ids for various things.  Categories are:
            all, users, roles, channels
         """
-        if message.channel.name == "bot-control":
-            return
 
         cats = ['channels', 'roles', 'users']
 
@@ -1607,7 +1595,6 @@ class NextBot(discord.Client):
         return
 
 
-
     #########################################################Features############################################################
 
 
@@ -1622,39 +1609,6 @@ class NextBot(discord.Client):
         return Response("Good morning! I'm fit again! :D", delete_after=20)
 
 
-    async def cmd_stopwatch(self, message, command):
-        """
-        Usage:
-            {command_prefix}stopwatch start/stop/status
-
-        Handles a stopwatch.
-        Attention: Their can only be one stopwatch on all servers at the moment. It will be fixed later.
-        """
-        #FIXME More stopwatches
-
-        if command == "start":
-            if self.timer != 0:
-                response = "The time of the timer was running for " + str(time.time() - self.timer) + " seconds. It has been deleted and the new timer started."
-            else:
-                response = "The timer has been started."
-            self.timer = time.time()
-            return Response(response, delete_after=60)
-
-        elif command == "stop":
-            value = round(time.time() - self.timer, 2)
-            self.timer = 0
-            return Response("The time was %s seconds." % value, delete_after=60)
-
-        elif command == "status":
-            if self.timer != 0:
-                return Response("The stopwatch run since %s seconds." % str(round(time.time() - self.timer, 2)), delete_after=60)
-            else:
-                return Response("The stopwatch isn't running.", delete_after=60)
-        else:
-            return Response("Cannot recognize you're command. Use %sstopwatch start/stop/status or %shelp stopwatch to see the help." % (self.command_prefix,self.command_prefix), delete_after=30)
-
-
-
     async def cmd_perms(self, message, author, channel, server, permissions):
         """
         Usage:
@@ -1662,8 +1616,6 @@ class NextBot(discord.Client):
 
         Sends the user a list of their permissions.
         """
-        if message.channel.name == "bot-control":
-            return
 
         lines = ['Command permissions in %s\n' % server.name, '```', '```']
 
@@ -1678,8 +1630,6 @@ class NextBot(discord.Client):
         ####
 
 
-
-
     ######################################################Please insert here######################################################
 
 
@@ -1692,12 +1642,14 @@ class NextBot(discord.Client):
         JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Game %s was added to the games file :space_invader:" % game, delete_after=15)
 
+
     async def cmd_rmgame(self, message, game):
         game = game.lower()
         self.gamesdata["games"].__delitem__(game)
 
         JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Game %s was removed from the games file :space_invader:" % game, delete_after=15)
+
 
     async def cmd_addaltname(self, message, game, name):
         game = game.lower()
@@ -1707,6 +1659,7 @@ class NextBot(discord.Client):
         JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Name %s was added to the game %s :space_invader:" % (name, game), delete_after=15)
 
+
     async def cmd_rmaltname(self, message, game, name):
         game = game.lower()
         name = name.lower()
@@ -1714,6 +1667,7 @@ class NextBot(discord.Client):
 
         JsonParser.exporter(self.gamesdata, self.games_file)
         return Response("Name %s was removed from the game %s :space_invader:" % (name, game), delete_after=15)
+
 
     async def cmd_addmember(self, message, game, memberid):
         game = game.lower()
@@ -1725,6 +1679,7 @@ class NextBot(discord.Client):
         except:
             return Response("Member %s was added to the game %s :space_invader:" % (memberid, game), delete_after=15)
 
+
     async def cmd_rmmember(self, message, game, memberid):
         game = game.lower()
         self.gamesdata["games"][game]["members"].remove(memberid)
@@ -1735,12 +1690,15 @@ class NextBot(discord.Client):
         except:
             return Response("Member %s was removed from the game %s :space_invader:" % (memberid, game), delete_after=15)
 
+
     async def cmd_listgames(self, message):
         return Response(", ".join(list(self.gamesdata["games"].keys())), delete_after=25)
+
 
     async def cmd_listaltgames(self, message, game):
         game = game.lower()
         return Response(", ".join(self.gamesdata["games"][game]["altnames"]), delete_after=25)
+
 
     async def cmd_listmembers(self, message, game):
         game = game.lower()
@@ -1753,12 +1711,14 @@ class NextBot(discord.Client):
                 pass
         return Response(members, delete_after=25)
 
+
     async def cmd_createinvite(self, server, leftover_args):
         if leftover_args:
             link = await self.create_invite(server, max_age=str(int(leftover_args[0]) * 60))
         else:
             link = await self.create_invite(server)
         return Response("The new invite link is: %s" % link.url)
+
 
     async def cmd_createcinvite(self, channel, leftover_args):
         if leftover_args:
@@ -1767,15 +1727,154 @@ class NextBot(discord.Client):
             link = await self.create_invite(channel)
         return Response("The new invite link is: %s" % link.url)
 
+    async def cmd_listinvites(self, server):
+        return Response("The active invites are: %s" % " ".join([invite.url for invite in await self.invites_from(server)]))
 
 
+    async def cmd_clearreacts(self, channel, leftover_args):
+        if not leftover_args:
+            number = 1
+            limit = 2
+        else:
+            number = int(leftover_args[0])
+            limit = int(leftover_args[0]) + 1
+        collmessages = []
+        async for log in self.logs_from(channel, limit=limit):
+            collmessages.append(log)
+        await self.clear_reactions(collmessages[number])
+        return Response("Cleared reactions from message %s" % collmessages[number], delete_after=10)
+
+
+    async def cmd_stopwatch(self, message, ident, command):
+        """
+        Usage:
+            {command_prefix}stopwatch identificator start/stop/status
+
+        Handles a stopwatch.
+        Attention: Their can only be one stopwatch on all servers at the moment. It will be fixed later.
+        """
+        try:
+            index = self.utilsdata["utils"]["stopwatch"]["id"].index(ident)
+        except ValueError:
+            index = False
+
+        if command == "start":
+            if index:
+                response = "The time of the timer was running for " + str(round(time.time() - float(self.utilsdata["utils"]["stopwatch"]["value"][index]), 2)) + " seconds. It has been deleted and the new timer started."
+                self.utilsdata["utils"]["stopwatch"]["value"][index] = time.time()
+            else:
+                response = "The timer has been started."
+                self.utilsdata["utils"]["stopwatch"]["value"].append(str(time.time()))
+                self.utilsdata["utils"]["stopwatch"]["id"].append(ident)
+            JsonParser.exporter(self.utilsdata, self.utils_file)
+
+            return Response(response, delete_after=60)
+
+        elif command == "stop":
+            value = round(time.time() - float(self.utilsdata["utils"]["stopwatch"]["value"][index]), 2)
+            self.utilsdata["utils"]["stopwatch"]["id"].remove(self.utilsdata["utils"]["stopwatch"]["id"][index])
+            self.utilsdata["utils"]["stopwatch"]["value"].remove(self.utilsdata["utils"]["stopwatch"]["value"][index])
+            JsonParser.exporter(self.utilsdata, self.utils_file)
+            return Response("The time was %s seconds." % value, delete_after=60)
+
+        elif command == "status":
+            if index:
+                return Response("The stopwatch run since %s seconds." % str(round(time.time() - float(self.utilsdata["utils"]["stopwatch"]["value"][index]), 2)), delete_after=60)
+            else:
+                return Response("The stopwatch isn't running.", delete_after=60)
+        else:
+            return Response("Cannot recognize you're command. Use %sstopwatch name start/stop/status or %shelp stopwatch to see the help." % (self.command_prefix,self.command_prefix), delete_after=30)
+
+    @owner_only
+    async def cmd_settoken(self, channel, token):
+
+        old_token = self.optionsdata["options"]["bot"]["Token"]
+        self.optionsdata["options"]["bot"]["Token"] = token
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        if channel.is_private:
+            return Response("Changed the token of the bot from %s to %s" % (old_token, token))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the token of the bot from %s to %s" % (old_token, token))
+                        return Response("Changed the token of the bot.")
+
+
+    @owner_only
+    async def cmd_setlogger(self, channel, logger):
+
+        old_logger = self.optionsdata["options"]["debug"]["Logger"]
+        self.optionsdata["options"]["debug"]["Logger"] = logger
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        if channel.is_private:
+            return Response("Changed the logger of the bot from %s to %s" % (old_logger, logger))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the logger of the bot from %s to %s" % (old_logger, logger))
+                        return Response("Changed the token of the bot.")
+
+
+    async def cmd_setgame(self, channel, leftover_args):
+
+        game = " ".join([title for title in leftover_args])
+        old_game = self.optionsdata["options"]["settings"]["PlayedGame"]
+        self.optionsdata["options"]["settings"]["PlayedGame"] = game
+        JsonParser.exporter(self.optionsdata, self.options_file)
+        game_object = discord.Game(name=game)
+        await self.change_presence(game=game_object)
+
+
+        return Response("Changed the logger of the bot from %s to %s" % (old_game, game), delete_after=20)
+
+
+    @owner_only
+    async def cmd_togglelogger(self, channel):
+
+        old_logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
+        if old_logtofile == "True":
+            self.optionsdata["options"]["debug"]["LogToFile"] = "False"
+        else:
+            self.optionsdata["options"]["debug"]["LogToFile"] = "True"
+
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        if channel.is_private:
+            return Response("Changed the logger of the bot from %s to %s" % (old_logtofile, self.optionsdata["options"]["debug"]["LogToFile"]))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the logger of the bot from %s to %s" % (old_logtofile, self.optionsdata["options"]["debug"]["LogToFile"]))
+                        return Response("Changed the logger of the bot.")
+
+
+    @owner_only
+    async def cmd_setbindedchannel(self, channel, channelid):
+
+        old_channel = self.optionsdata["options"]["settings"]["BindToChannels"]
+        self.optionsdata["options"]["settings"]["BindToChannels"] = channelid
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        if channel.is_private:
+            return Response("Changed the logger of the bot from %s to %s" % (old_channel, channelid))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the logger of the bot from %s to %s" % (old_channel, channelid))
+                        return Response("Changed the logger of the bot.")
+
+
+    async def kickinactives(self, server, days):
+        await self.prune_members(server, days)
+        Response("Inactive users without a role will be kicked in %s days" % days, delete_after=20) #TODO Testing
 
     ##############################################################################################################################
-
-
-
-
-
 
 
     async def clear(self, message, number):
@@ -1806,14 +1905,15 @@ class NextBot(discord.Client):
                         await self.delete_channel(channel)
 
 
-
-
     async def cmd_shutdownsurrogate(self, channel):
         await self.safe_send_message(channel, "Good bye :wave:")
         self.end = True
         await self.logout()
         await self.close()
         return
+
+
+
 
 
 

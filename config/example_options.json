@@ -6,7 +6,8 @@
     },
     "settings": {
       "CommandPrefix": "NotAPrefix",
-      "BindToChannels": "None"
+      "BindToChannels": "None",
+      "PlayedGame": ""
     },
     "debug": {
       "Logger": "DEBUG",

@@ -1,0 +1,45 @@
+{
+  "utils": {
+    "stopwatch": {
+      "id": [
+        ""
+      ],
+      "value": [
+        ""
+      ]
+    },
+    "reminder": {
+      "time": [
+        ""
+      ],
+      "person": [
+        ""
+      ],
+      "value": [
+        ""
+      ]
+    },
+    "birthday": {
+      "day": [
+        ""
+      ],
+      "person": [
+        ""
+      ]
+    },
+    "voting": {
+      "id": [
+        ""
+      ],
+      "topic": [
+        ""
+      ],
+      "options": [
+        ""
+      ],
+      "answers": [
+        ""
+      ]
+    }
+  }
+}
