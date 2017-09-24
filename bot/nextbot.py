@@ -1407,18 +1407,17 @@ class NextBot(discord.Client):
         return Response(message, delete_after=120)
 
 
-    async def cmd_info(self, message, leftover_args):
+    async def cmd_info(self, message, personid):
         """
         Usage:
-            {command_prefix}info name
+            {command_prefix}info id
 
         Prints information about the given user
         Don't use the nickname of a user
         """
-        person = "".join(leftover_args)
         members = message.server.members
         for member in members:
-            if member.name == person:
+            if member.id == personid:
                 #Personal
                 message = "Information about user general:"
                 message += "\n\nName: " + str(member.name)
