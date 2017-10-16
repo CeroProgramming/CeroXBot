@@ -9,5 +9,6 @@ config/options.json
 config/permissions.ini
 config/permissions.json
 config/games.json
+config/utils.json
 bot/__pycache__
 tmp
