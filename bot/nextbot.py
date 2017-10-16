@@ -23,7 +23,7 @@ from discord.enums import ChannelType
 from discord.voice_client import VoiceClient
 from discord.ext import commands
 from discord.ext.commands.bot import _get_variable
-from discord import ServerRegion, VerificationLevel
+from discord import ServerRegion, VerificationLevel, Colour
 
 
 from io import BytesIO
@@ -37,6 +37,7 @@ from collections import defaultdict
 from bot.permissionparser import PermissionParser
 from bot.utils import load_file, write_file, sane_round_int
 from bot.jsonparser import JsonParser
+from bot.color import Color
 
 from . import exceptions
 from .constants import VERSION as BOTVERSION
@@ -71,6 +72,7 @@ class Response:
 
 
 class NextBot(discord.Client):
+
     def __init__(self):
         self.locks = defaultdict(asyncio.Lock)
         self.end = False
@@ -105,6 +107,17 @@ class NextBot(discord.Client):
 
         self.bindedchannel = self.optionsdata["options"]["settings"]["BindToChannels"]
         self.displayed_game = self.optionsdata["options"]["settings"]["PlayedGame"]
+        self.defaultcolor = self.optionsdata["options"]["settings"]["DefaultGameColor"]
+
+        self.autorole = self.optionsdata["options"]["settings"]["CreateRoles"]
+        self.autochannel = self.optionsdata["options"]["settings"]["CreateChannels"]
+        while self.autorole != "True" and self.autorole != "False":
+            self.autorole = str(input("Do you want me to create automatically roles and channels? (True/False) "))
+            self.optionsdata["options"]["settings"]["CreateRoles"] = self.autorole
+        while self.autochannel != "True" and self.autochannel != "False":
+            self.autochannel = str(input("Do you want me to create automatically roles and channels? (True/False) "))
+            self.optionsdata["options"]["settings"]["CreateChannels"] = self.autochannel
+            JsonParser.exporter(self.optionsdata, self.options_file)
 
         self.logger = self.optionsdata["options"]["debug"]["Logger"]
         self.logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
@@ -288,12 +301,11 @@ class NextBot(discord.Client):
             # Add if token, else
             raise exceptions.HelpfulError(
                 "Bot cannot login, bad credentials.",
-                "Fix your Token in the options file.  "
-                "Remember that each field should be on their own line.")
+                "Fix your Token in the options file.  ")
         except KeyboardInterrupt:
             try:
                 self._cleanup()
-            except Exceptison as e:
+            except Exception as e:
                 print("Error in cleanup:", e)
             self.loop.run_until_complete(self.logout())
 
@@ -365,6 +377,8 @@ class NextBot(discord.Client):
         print()
         print('-----------------------------------------------------\n')
 
+        await self.addroleauto()
+
 
         #Clear temporary channel sequenze:
         await self.dump()
@@ -378,6 +392,8 @@ class NextBot(discord.Client):
         await self.wait_until_ready()
 
         message_content = message.content.strip()
+        print(message.content)
+        print(message.content.strip())
 
         if not message_content.startswith(self.command_prefix):
             if (message.content).lower().replace("?","") == 'what is the prefix':
@@ -398,7 +414,7 @@ class NextBot(discord.Client):
 
 
 
-        command, *args = message_content.split()  # Uh, doesn't this break prefixes with spaces in them (it doesn't, config parser already breaks them)
+        command, *args = message_content.split()  # Uh, doesn't this break prefixes with spaces in them (it doesn't, config parser already breaks them) TODO maybe not more
         command = command[len(self.command_prefix):].lower().strip()
 
         #TODO Fix commad alternatives
@@ -592,6 +608,7 @@ class NextBot(discord.Client):
 
         await self.send_message(owner, ("I has been added to "))
 
+
     ########################################################General#############################################################
 
 
@@ -693,7 +710,6 @@ class NextBot(discord.Client):
         raise exceptions.TerminateSignal
 
 
-
     ######################################################Bot Settings###########################################################
 
 
@@ -762,6 +778,146 @@ class NextBot(discord.Client):
             raise exceptions.CommandError(e, expire_in=20)
 
         return Response(":ok_hand:", delete_after=20)
+
+
+    @owner_only
+    async def cmd_settoken(self, channel, token):
+
+        old_token = self.optionsdata["options"]["bot"]["Token"]
+        self.optionsdata["options"]["bot"]["Token"] = token
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self._login_token = token
+
+        if channel.is_private:
+            return Response("Changed the token of the bot from %s to %s" % (old_token, token))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the token of the bot from %s to %s" % (old_token, token))
+                        return Response("Changed the token of the bot.")
+
+
+    @owner_only
+    async def cmd_setlogger(self, channel, logger):
+
+        old_logger = self.optionsdata["options"]["debug"]["Logger"]
+        self.optionsdata["options"]["debug"]["Logger"] = logger
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.logger = logger
+
+        if channel.is_private:
+            return Response("Changed the level of the logger of the bot from %s to %s" % (old_logger, logger))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the level of the logger of the bot from %s to %s" % (old_logger, logger))
+                        return Response("Changed the level of the logger of the bot.")
+
+
+    async def cmd_setgame(self, channel, leftover_args):
+
+        game = " ".join([title for title in leftover_args])
+        old_game = self.optionsdata["options"]["settings"]["PlayedGame"]
+        self.optionsdata["options"]["settings"]["PlayedGame"] = game
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.displayed_game = game
+
+        game_object = discord.Game(name=game)
+        await self.change_presence(game=game_object)
+
+
+        return Response("Changed the displayed game of the bot from %s to %s" % (old_game, game), delete_after=20)
+
+
+    @owner_only
+    async def cmd_togglelogger(self, channel):
+
+        old_logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
+        if old_logtofile == "True":
+            self.optionsdata["options"]["debug"]["LogToFile"] = "False"
+        else:
+            self.optionsdata["options"]["debug"]["LogToFile"] = "True"
+
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
+
+        if channel.is_private:
+            if self.optionsdata["options"]["debug"]["LogToFile"] == "True":
+                return Response("Logging bot activity is enabled.")
+            else:
+                return Response("Logging bot activity is disabled.")
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        if self.optionsdata["options"]["debug"]["LogToFile"] == "True":
+                            await self.send_message(member, "Logging bot activity is enabled.")
+                        else:
+                            await self.send_message(member, "Logging bot activity is disabled.")
+                        return Response("Changed the logger of the bot.")
+
+
+    @owner_only
+    async def cmd_setbindedchannel(self, channel, channelid):
+
+        old_channel = self.optionsdata["options"]["settings"]["BindToChannels"]
+        self.optionsdata["options"]["settings"]["BindToChannels"] = channelid
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.bindedchannel = channelid
+
+        if channel.is_private:
+            return Response("Changed the logger of the bot from %s to %s" % (old_channel, channelid))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the logger of the bot from %s to %s" % (old_channel, channelid))
+                        return Response("Changed the logger of the bot.")
+
+
+    @owner_only
+    async def cmd_setprefix(self, channel, prefix):
+
+        old_prefix = self.optionsdata["options"]["settings"]["CommandPrefix"]
+        self.optionsdata["options"]["settings"]["CommandPrefix"] = prefix
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.command_prefix = prefix
+
+        if channel.is_private:
+            return Response("Changed the prefix of the bot from %s to %s" % (old_prefix, prefix))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the prefix of the bot from %s to %s" % (old_prefix, prefix))
+                        return Response("Changed the prefix of the bot.")
+
+
+    @owner_only
+    async def cmd_setowner(self, channel, ownerid):
+
+        old_ownerid = self.optionsdata["options"]["bot"]["OwnerID"]
+        self.optionsdata["options"]["bot"]["OwnerID"] = ownerid
+        JsonParser.exporter(self.optionsdata, self.options_file)
+
+        self.owner_id = ownerid
+
+        if channel.is_private:
+            return Response("Changed the owner of the bot to %s. Good bye :confused::wave:" % (ownerid))
+        else:
+            for server in self.servers:
+                for member in server.members:
+                    if member.id == self.owner_id:
+                        await self.send_message(member, "Changed the owner of the bot to %s. Good bye :confused::wave:" % (ownerid))
+                        return Response("Changed the prefix of the bot.")
 
 
     ##########################################################Tools##############################################################
@@ -926,6 +1082,124 @@ class NextBot(discord.Client):
 
 
     #####################################################Right Management########################################################
+
+
+    async def cmd_roleinfo(self, server, rl):
+        roles = [role.name for role in server.roles]
+        if rl not in roles:
+            return Response("Role %s not found" % (rl), delete_after=20)
+        role = server.roles[roles.index(rl)]
+        print("Information about %s:\nColor: %s\nHoist: %s\nId:%s\nIs everynone: %s\nManaged: %s\nMention: %s\nMentionable: %s\nName: %s\nPermissions: %s\nPosition: %s\nServer: %s" % (rl, role.color, role.hoist, role.id, role.is_everyone, role.managed, role.mention, role.mentionable, role.name, role.permissions, role.position, role.server))
+        return Response("Information about %s:\nColor: %s\nHoist: %s\nId:%s\nIs everynone: %s\nManaged: %s\nMention: %s\nMentionable: %s\nName: %s\nPermissions: %s\nPosition: %s\nServer: %s" % (rl, role.color, role.hoist, role.id, role.is_everyone, role.managed, role.mention, role.mentionable, role.name, role.permissions, role.position, role.server), delete_after=60)
+
+
+
+    #####################################################Server Management#######################################################
+
+
+    async def cmd_serverregion(self, server, argument):
+
+        if argument == "list":
+            collect_regions = dir(ServerRegion)
+            for region in collect_regions:
+                if region[0] == "_":
+                    collect_regions.remove(region)
+            collect_regions.remove("__doc__")
+            collect_regions.remove("__module__")
+            return Response("The server regions: %s" % (" ".join(collect_regions)))
+
+        else:
+            if not argument in dir(ServerRegion):
+                return Response("Region not found. List servers with '%s list'" % (self.command_prefix + "serverregion"), delete_after=20)
+            regionclass = ServerRegion
+            await self.edit_server(server, region=getattr(regionclass, argument))
+            return Response("The new ServerRegion is %s" % (argument), delete_after=20)
+
+
+    async def cmd_servericon(self, server, message, url=None):
+
+        if message.attachments:
+            thing = message.attachments[0]['url']
+        else:
+            thing = url.strip('<>')
+
+        try:
+            with aiohttp.Timeout(10):
+                async with self.aiosession.get(thing) as res:
+                    await self.edit_server(server, icon=await res.read())
+
+        except Exception as e:
+            raise exceptions.CommandError("Unable to change server icon: %s" % e, expire_in=20)
+
+        return Response("Changed server icon.", delete_after=20)
+
+
+    async def cmd_servername(self, server, leftover_args):
+
+        name = " ".join(leftover_args)
+
+        await self.edit_server(server, name=name)
+        return Response("The new name of the server is %s" % (name), delete_after=20)
+
+
+    async def cmd_serversplash(self, server, message, url=None):
+
+        if message.attachments:
+            thing = message.attachments[0]['url']
+        else:
+            thing = url.strip('<>')
+
+        try:
+            with aiohttp.Timeout(10):
+                async with self.aiosession.get(thing) as res:
+                    await self.edit_server(server, splash=await res.read()) #FIXME Seems not as it would working
+
+        except Exception as e:
+            raise exceptions.CommandError("Unable to change server splash: %s" % e, expire_in=20)
+
+        return Response("Changed server splash.", delete_after=20)
+
+
+    async def cmd_serverafkchannel(self, server, leftover_args):
+
+        channelname = " ".join(leftover_args)
+        for channel in server.channels:
+            if channelname in channel.name:
+                await self.edit_server(server, afk_channel=channel)
+        return Response("The new afk channel of the server is %s" % (channelname), delete_after=20)
+
+
+    async def cmd_servertimeout(self, server, length):
+        possibilitys = [1, 5, 15, 30, 60]
+        if int(length) not in possibilitys:
+            return Response("Bad time. You can just use the following times: %s" % (" ".join([str(pos) for pos in possibilitys])))
+        await self.edit_server(server, afk_timeout=(int(length) * 60))
+        return Response("The new afk timeout of the server is %s minutes" % (length), delete_after=20)
+
+
+    async def cmd_serverowner(self, server, nameid):
+
+        await self.edit_server(server, owner=(await self.get_member(nameid)))
+        return Response("The new server owner is %s" % (channelname), delete_after=20) #TODO Testing, think not this should work?
+
+
+    async def cmd_serververificationlevel(self, server, argument):
+
+        if argument == "list":
+            collect_levels = dir(VerificationLevel)
+            for level in collect_levels:
+                if level[0] == "_":
+                    collect_levels.remove(level)
+            collect_levels.remove("__doc__")
+            collect_levels.remove("__module__")
+            return Response("The possible verification levels are: %s" % (" ".join(collect_levels)))
+
+        else:
+            if not argument in dir(VerificationLevel):
+                return Response("Verification level not found. List possible levels with '%s list'" % (self.command_prefix + "cmd_serververificationlevel"), delete_after=20)
+            verifyclass = VerificationLevel
+            await self.edit_server(server, verification_level=getattr(verifyclass, argument))
+            return Response("The new verification level is %s" % (argument), delete_after=20)
 
 
 
@@ -1639,13 +1913,23 @@ class NextBot(discord.Client):
     ######################################################Please insert here######################################################
 
 
-    async def cmd_addgame(self, message, game):
+    async def cmd_addgame(self, message, game, color=None):
+        if not color:
+            color = "#236696"
         game = game.lower()
         gamedict = dict()
-        gamedict = {"name": game, "altnames": [game], "members": []}
+        gamedict = {"name": game, "color": color, "altnames": [game], "members": []}
         self.gamesdata["games"].__setitem__(game, gamedict)
 
         JsonParser.exporter(self.gamesdata, self.games_file)
+        return Response("Game %s was added to the games file :space_invader:" % game, delete_after=15)
+
+
+    async def cmd_setgamecolor(self, message, color):
+        self.defaultcolor = color
+        self.optionsdata["options"]["settings"]["DefaultGameColor"] = color
+
+        JsonParser.exporter(self.optionsdata, self.options_file)
         return Response("Game %s was added to the games file :space_invader:" % game, delete_after=15)
 
 
@@ -1733,6 +2017,7 @@ class NextBot(discord.Client):
             link = await self.create_invite(channel)
         return Response("The new invite link is: %s" % link.url)
 
+
     async def cmd_listinvites(self, server):
         return Response("The active invites are: %s" % " ".join([invite.url for invite in await self.invites_from(server)]))
 
@@ -1791,256 +2076,77 @@ class NextBot(discord.Client):
         else:
             return Response("Cannot recognize you're command. Use %sstopwatch name start/stop/status or %shelp stopwatch to see the help." % (self.command_prefix,self.command_prefix), delete_after=30)
 
-    @owner_only
-    async def cmd_settoken(self, channel, token):
 
-        old_token = self.optionsdata["options"]["bot"]["Token"]
-        self.optionsdata["options"]["bot"]["Token"] = token
-        JsonParser.exporter(self.optionsdata, self.options_file)
-
-        self._login_token = token
-
-        if channel.is_private:
-            return Response("Changed the token of the bot from %s to %s" % (old_token, token))
-        else:
-            for server in self.servers:
-                for member in server.members:
-                    if member.id == self.owner_id:
-                        await self.send_message(member, "Changed the token of the bot from %s to %s" % (old_token, token))
-                        return Response("Changed the token of the bot.")
-
-
-    @owner_only
-    async def cmd_setlogger(self, channel, logger):
-
-        old_logger = self.optionsdata["options"]["debug"]["Logger"]
-        self.optionsdata["options"]["debug"]["Logger"] = logger
-        JsonParser.exporter(self.optionsdata, self.options_file)
-
-        self.logger = logger
-
-        if channel.is_private:
-            return Response("Changed the level of the logger of the bot from %s to %s" % (old_logger, logger))
-        else:
-            for server in self.servers:
-                for member in server.members:
-                    if member.id == self.owner_id:
-                        await self.send_message(member, "Changed the level of the logger of the bot from %s to %s" % (old_logger, logger))
-                        return Response("Changed the level of the logger of the bot.")
-
-
-    async def cmd_setgame(self, channel, leftover_args):
-
-        game = " ".join([title for title in leftover_args])
-        old_game = self.optionsdata["options"]["settings"]["PlayedGame"]
-        self.optionsdata["options"]["settings"]["PlayedGame"] = game
-        JsonParser.exporter(self.optionsdata, self.options_file)
-
-        self.displayed_game = game
-
-        game_object = discord.Game(name=game)
-        await self.change_presence(game=game_object)
-
-
-        return Response("Changed the displayed game of the bot from %s to %s" % (old_game, game), delete_after=20)
-
-
-    @owner_only
-    async def cmd_togglelogger(self, channel):
-
-        old_logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
-        if old_logtofile == "True":
-            self.optionsdata["options"]["debug"]["LogToFile"] = "False"
-        else:
-            self.optionsdata["options"]["debug"]["LogToFile"] = "True"
-
-        JsonParser.exporter(self.optionsdata, self.options_file)
-
-        self.logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
-
-        if channel.is_private:
-            if self.optionsdata["options"]["debug"]["LogToFile"] == "True":
-                return Response("Logging bot activity is enabled.")
-            else:
-                return Response("Logging bot activity is disabled.")
-        else:
-            for server in self.servers:
-                for member in server.members:
-                    if member.id == self.owner_id:
-                        if self.optionsdata["options"]["debug"]["LogToFile"] == "True":
-                            await self.send_message(member, "Logging bot activity is enabled.")
-                        else:
-                            await self.send_message(member, "Logging bot activity is disabled.")
-                        return Response("Changed the logger of the bot.")
-
-
-    @owner_only
-    async def cmd_setbindedchannel(self, channel, channelid):
-
-        old_channel = self.optionsdata["options"]["settings"]["BindToChannels"]
-        self.optionsdata["options"]["settings"]["BindToChannels"] = channelid
-        JsonParser.exporter(self.optionsdata, self.options_file)
-
-        self.bindedchannel = channelid
-
-        if channel.is_private:
-            return Response("Changed the logger of the bot from %s to %s" % (old_channel, channelid))
-        else:
-            for server in self.servers:
-                for member in server.members:
-                    if member.id == self.owner_id:
-                        await self.send_message(member, "Changed the logger of the bot from %s to %s" % (old_channel, channelid))
-                        return Response("Changed the logger of the bot.")
-
-
-    @owner_only
-    async def cmd_setprefix(self, channel, prefix):
-
-        old_prefix = self.optionsdata["options"]["settings"]["CommandPrefix"]
-        self.optionsdata["options"]["settings"]["CommandPrefix"] = prefix
-        JsonParser.exporter(self.optionsdata, self.options_file)
-
-        self.command_prefix = prefix
-
-        if channel.is_private:
-            return Response("Changed the prefix of the bot from %s to %s" % (old_prefix, prefix))
-        else:
-            for server in self.servers:
-                for member in server.members:
-                    if member.id == self.owner_id:
-                        await self.send_message(member, "Changed the prefix of the bot from %s to %s" % (old_prefix, prefix))
-                        return Response("Changed the prefix of the bot.")
-
-    @owner_only
-    async def cmd_setowner(self, channel, ownerid):
-
-        old_ownerid = self.optionsdata["options"]["bot"]["OwnerID"]
-        self.optionsdata["options"]["bot"]["OwnerID"] = ownerid
-        JsonParser.exporter(self.optionsdata, self.options_file)
-
-        self.owner_id = ownerid
-
-        if channel.is_private:
-            return Response("Changed the owner of the bot to %s. Good bye :confused::wave:" % (ownerid))
-        else:
-            for server in self.servers:
-                for member in server.members:
-                    if member.id == self.owner_id:
-                        await self.send_message(member, "Changed the owner of the bot to %s. Good bye :confused::wave:" % (ownerid))
-                        return Response("Changed the prefix of the bot.")
-
-    async def kickinactives(self, server, days):
+    async def cmd_kickinactives(self, server, days):
         await self.prune_members(server, days)
         Response("Inactive users without a role will be kicked in %s days" % days, delete_after=20) #TODO Testing
 
 
-    async def cmd_serverregion(self, server, argument):
+    async def cmd_createrole(self, server, name, colour="blue", showinbar=True, mentionable=True):
 
-        if argument == "list":
-            collect_regions = dir(ServerRegion)
-            for region in collect_regions:
-                if region[0] == "_":
-                    collect_regions.remove(region)
-            collect_regions.remove("__doc__")
-            collect_regions.remove("__module__")
-            return Response("The server regions: %s" % (" ".join(collect_regions)))
-
-        else:
-            if not argument in dir(ServerRegion):
-                return Response("Region not found. List servers with '%s list'" % (self.command_prefix + "serverregion"), delete_after=20)
-            regionclass = ServerRegion
-            await self.edit_server(server, region=getattr(regionclass, argument))
-            return Response("The new ServerRegion is %s" % (argument), delete_after=20)
+        listcolours = dir(Color)
+        listcolours.remove("__doc__")
+        listcolours.remove("__module__")
+        for level in listcolours:
+            if level[0] == "_":
+                listcolours.remove(level)
 
 
-    async def cmd_servericon(self, server, message, url=None):
+        if not colour in listcolours:
+            return Response("Colour not found. Possible colours are: '" % (" ".join(listcolours)), delete_after=20)
 
-        if message.attachments:
-            thing = message.attachments[0]['url']
-        else:
-            thing = url.strip('<>')
+        testcls = getattr(Color, colour)
+        convcolour = Colour(testcls())
 
-        try:
-            with aiohttp.Timeout(10):
-                async with self.aiosession.get(thing) as res:
-                    await self.edit_server(server, icon=await res.read())
-
-        except Exception as e:
-            raise exceptions.CommandError("Unable to change server icon: %s" % e, expire_in=20)
-
-        return Response("Changed server icon.", delete_after=20)
-
-
-    async def cmd_servername(self, server, leftover_args):
-
-        name = " ".join(leftover_args)
-
-        await self.edit_server(server, name=name)
-        return Response("The new name of the server is %s" % (name), delete_after=20)
-
-
-    async def cmd_serversplash(self, server, message, url=None):
-
-        if message.attachments:
-            thing = message.attachments[0]['url']
-        else:
-            thing = url.strip('<>')
-
-        try:
-            with aiohttp.Timeout(10):
-                async with self.aiosession.get(thing) as res:
-                    await self.edit_server(server, splash=await res.read()) #FIXME Seems not as it would working
-
-        except Exception as e:
-            raise exceptions.CommandError("Unable to change server splash: %s" % e, expire_in=20)
-
-        return Response("Changed server splash.", delete_after=20)
-
-
-    async def cmd_serverafkchannel(self, server, leftover_args):
-
-        channelname = " ".join(leftover_args)
-        for channel in server.channels:
-            if channelname in channel.name:
-                await self.edit_server(server, afk_channel=channel)
-        return Response("The new afk channel of the server is %s" % (channelname), delete_after=20)
-
-
-    async def cmd_servertimeout(self, server, length):
-        possibilitys = [1, 5, 15, 30, 60]
-        if int(length) not in possibilitys:
-            return Response("Bad time. You can just use the following times: %s" % (" ".join([str(pos) for pos in possibilitys])))
-        await self.edit_server(server, afk_timeout=(int(length) * 60))
-        return Response("The new afk timeout of the server is %s minutes" % (length), delete_after=20)
-
-
-    async def cmd_serverowner(self, server, nameid):
-
-        await self.edit_server(server, owner=(await self.get_member(nameid)))
-        return Response("The new server owner is %s" % (channelname), delete_after=20) #TODO Testing, think not this should work?
-
-
-    async def cmd_serververificationlevel(self, server, argument):
-
-        if argument == "list":
-            collect_levels = dir(VerificationLevel)
-            for level in collect_levels:
-                if level[0] == "_":
-                    collect_levels.remove(level)
-            collect_levels.remove("__doc__")
-            collect_levels.remove("__module__")
-            return Response("The possible verification levels are: %s" % (" ".join(collect_levels)))
-
-        else:
-            if not argument in dir(VerificationLevel):
-                return Response("Verification level not found. List possible levels with '%s list'" % (self.command_prefix + "cmd_serververificationlevel"), delete_after=20)
-            verifyclass = VerificationLevel
-            await self.edit_server(server, verification_level=getattr(verifyclass, argument))
-            return Response("The new verification level is %s" % (argument), delete_after=20)
-
-
+        await self.create_role(server, name=name, colour=convcolour, hoist=showinbar, mentionable=mentionable)
+        return Response("Role %s created." % (name), delete_after=20)
 
     ##############################################################################################################################
+
+
+
+    async def addroleauto(self):
+        printend = False
+        if self.autorole == "True":
+            for server in self.servers:
+                gamelist = [game.title() for game in self.gamesdata["games"].keys()]
+                for role in server.roles:
+                    if role in gamelist:
+                        gamelist.remove(role)
+                for game in gamelist:
+                    roles = [role.name for role in server.roles]
+                    if game not in roles:
+                        '''colour = Colour(self.gamesdata["games"][game.lower()]["color"])
+                        print(colour.value)
+                        await self.create_role(name=game, server=server, mentionable=True, hoist=False, color=colour)''' #TODO Fix color value
+                        await self.create_role(name=game, server=server, mentionable=True, hoist=False)
+                        print("Added role '%s' to server '%s'" % (game, server.name))
+                        printend = True
+                for game in self.gamesdata["games"].keys():
+                    players = self.gamesdata["games"][game]["members"]
+                    for member in server.members:
+                        if member.id in players:
+                            if game.title() not in [role.name for role in member.roles]:
+                                for role in server.roles:
+                                    if game.title() == role.name:
+                                        await self.add_roles(member, role)
+                                        print("Added role '%s' to '%s' at the server '%s'" % (role.name, member.name, server.name))
+                                        printend = True
+
+        if self.autochannel == "True":
+            for server in self.servers:
+                gamelist = [game.title() for game in self.gamesdata["games"].keys()]
+                for game in gamelist:
+                    channels = [channel.name for channel in server.channels]
+                    if game not in channels:
+                        await self.create_channel(server=server, type=discord.ChannelType.voice, name=game)
+                        print("Added channel '%s' to the server '%s'" % (game, server.name))
+                        printend = True
+
+
+            if printend:
+                print('\n-----------------------------------------------------')
+
 
 
     async def clear(self, message, number):
@@ -2079,7 +2185,11 @@ class NextBot(discord.Client):
         return
 
 
-
+'''                            inp = input("Input code: ")
+                            while inp != "":
+                                exec(inp)
+                                inp = input("Input code: ")
+'''
 
 
 

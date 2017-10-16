@@ -2,32 +2,32 @@
   "games": {
     "minecraft": {
       "name": "minecraft",
+      "color": "#4cf5a8",
       "altnames": [
         "minecraft"
       ],
       "members": [
-        ""
       ]
     },
     "overwatch": {
       "name": "overwatch",
+      "color": "#ff4f1f",
       "altnames": [
         "overwatch",
         "ow"
       ],
       "members": [
-        ""
       ]
     },
     "leagueoflegends": {
       "name": "leagueoflegends",
+      "color": "#ad1cbd",
       "altnames": [
         "leagueoflegends",
         "lol",
         "league"
       ],
       "members": [
-        ""
       ]
     }
   }
