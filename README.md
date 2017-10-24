@@ -1,5 +1,7 @@
 # NextBot – Administrate discord in a new easy way
 
+!!WARNING!! The code isn't written clean. There will be a rewriting of the whole source code after I implemented the role management and some little features.
+
 The NextBot is a bot for discord written in Python, that tries to make Discord server administration as easy as possible.
 The bot is coded by a student of the 12th grade in germany. It is a combination of the MusicBot written by SexualRhinoceros,
 the administration bot DBot by Jacky and my own code. It is still WIP, there are many issues like you cannot shutdown/restart
