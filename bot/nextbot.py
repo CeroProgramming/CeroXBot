@@ -1,41 +1,27 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+""" Coming soon...""" #TODO Insert Readme as var
 
-import discord
 import asyncio
-import random
 import logging
-import aiohttp
-import os
 import sys
 import time
-import shlex
-import shutil
 import inspect
 import traceback
-import configparser
-import importlib
-
-
-from discord import utils
-from discord.object import Object
-from discord.enums import ChannelType
-from discord.voice_client import VoiceClient
-from discord.ext import commands
-from discord.ext.commands.bot import _get_variable
-from discord import ServerRegion, VerificationLevel, Colour
-
-
+#import importlib
 from io import BytesIO
 from functools import wraps
 from textwrap import dedent
-from datetime import timedelta
-from random import choice, shuffle
 from collections import defaultdict
+
+import aiohttp
+
+import discord
+from discord import ServerRegion, VerificationLevel, Colour
+from discord.ext.commands.bot import _get_variable
 
 
 from bot.permissionparser import PermissionParser
-from bot.utils import load_file, write_file, sane_round_int
 from bot.jsonparser import JsonParser
 from bot.color import Color
 
@@ -43,28 +29,28 @@ from . import exceptions
 from .constants import VERSION as BOTVERSION
 
 
-optionsdata = JsonParser.importer("options.json")
-logger = logging.getLogger('discord')
-if optionsdata["options"]["debug"]["Logger"] == "DEBUG":
-    logger.setLevel(logging.DEBUG)
-elif optionsdata["options"]["debug"]["Logger"] == "INFO":
-    logger.setLevel(logging.INFO)
-elif optionsdata["options"]["debug"]["Logger"] == "WARNING":
-    logger.setLevel(logging.WARNING)
-elif optionsdata["options"]["debug"]["Logger"] == "ERROR":
-    logger.setLevel(logging.ERROR)
-elif optionsdata["options"]["debug"]["Logger"] == "CRITICAL":
-    logger.setLevel(logging.CRITICAL)
+OPTIONS_DATA = JsonParser.importer("options.json")
+LOGGER = logging.getLogger('discord')
+if OPTIONS_DATA["options"]["debug"]["Logger"] == "DEBUG":
+    LOGGER.setLevel(logging.DEBUG)
+elif OPTIONS_DATA["options"]["debug"]["Logger"] == "INFO":
+    LOGGER.setLevel(logging.INFO)
+elif OPTIONS_DATA["options"]["debug"]["Logger"] == "WARNING":
+    LOGGER.setLevel(logging.WARNING)
+elif OPTIONS_DATA["options"]["debug"]["Logger"] == "ERROR":
+    LOGGER.setLevel(logging.ERROR)
+elif OPTIONS_DATA["options"]["debug"]["Logger"] == "CRITICAL":
+    LOGGER.setLevel(logging.CRITICAL)
 else:
-    logger.setLevel(logging.NOTSET)
+    LOGGER.setLevel(logging.NOTSET)
 
-if optionsdata["options"]["debug"]["LogToFile"] == "True":
-    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-    handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-    logger.addHandler(handler)
-
+if OPTIONS_DATA["options"]["debug"]["LogToFile"] == "True":
+    HANDLER = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    HANDLER.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+    LOGGER.addHandler(HANDLER)
 
 class Response:
+    ''' Coming soon.. '''
     def __init__(self, content, reply=False, delete_after=0):
         self.content = content
         self.reply = reply
@@ -72,7 +58,7 @@ class Response:
 
 
 class NextBot(discord.Client):
-
+    ''' Coming soon.. '''
     def __init__(self):
         self.locks = defaultdict(asyncio.Lock)
         self.end = False
@@ -80,7 +66,7 @@ class NextBot(discord.Client):
         self.options_file = "options.json"
         self.optionsdata = JsonParser.importer(self.options_file)
         if self.optionsdata == "ErrorNoFileFound":
-            safe_print("Your config files are missing.  Neither options.json nor example_options.json were found.,\n \
+            self.safe_print("Your config files are missing.  Neither options.json nor example_options.json were found.,\n \
             Grab the files back from the archive or remake them yourself and copy paste the content \n \
             from the repo.  Stop removing important files!")
             raise exceptions.TerminateSignal
@@ -125,14 +111,10 @@ class NextBot(discord.Client):
         self.perms_file = "permissions.json"
         self.permsdata = JsonParser.importer(self.perms_file)
         if self.optionsdata == "ErrorNoFileFound":
-            safe_print("Your config files are missing.  Neither options.json nor example_options.json were found.,\n \
+            self.safe_print("Your config files are missing.  Neither options.json nor example_options.json were found.,\n \
             Grab the files back from the archive or remake them yourself and copy paste the content \n \
             from the repo.  Stop removing important files!")
             raise exceptions.TerminateSignal
-
-
-
-
 
         #TODO Add a blacklist function for users to be able to use absolutly none command
 
@@ -152,7 +134,7 @@ class NextBot(discord.Client):
         self.games_file = "games.json"
         self.gamesdata = JsonParser.importer(self.games_file)
         if self.gamesdata == "ErrorNoFileFound":
-            safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
+            self.safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
             Grab the files back from the archive or remake them yourself and copy paste the content \n \
             from the repo.  Stop removing important files!")
             raise exceptions.TerminateSignal
@@ -160,21 +142,23 @@ class NextBot(discord.Client):
         self.utils_file = "utils.json"
         self.utilsdata = JsonParser.importer(self.utils_file)
         if self.utilsdata == "ErrorNoFileFound":
-            safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
+            self.safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
             Grab the files back from the archive or remake them yourself and copy paste the content \n \
             from the repo.  Stop removing important files!")
             raise exceptions.TerminateSignal
 
 
-    # TODO: Add some sort of `denied` argument for a message to send when someone else tries to use it
-    def owner_only(func, *args):
+    #TODO Add some sort of `denied` argument for a message to send when someone else tries to use it
+    def owner_only(func, *args): #pylint: disable=E0213,W0613
+        ''' Coming soon.. '''
         @wraps(func)
         async def wrapper(self, *args, **kwargs):
+            ''' Coming soon.. '''
             # Only allow the owner to use these commands
             orig_msg = _get_variable('message')
 
             if not orig_msg or orig_msg.author.id == self.owner_id:
-                return await func(self, *args, **kwargs)
+                return await func(self, *args, **kwargs) #pylint: disable=E1102
             else:
                 raise exceptions.PermissionsError("Only the owner can use this command..", expire_in=30)
 
@@ -182,27 +166,28 @@ class NextBot(discord.Client):
 
 
     @staticmethod
-    def _fixg(x, dp=2):
+    def _fixg(x, dp=2): #pylint: disable=C0103
         return ('{:.%sf}' % dp).format(x).rstrip('0').rstrip('.')
-
 
     def _get_owner(self, voice=False):
         if voice:
             for server in self.servers:
                 for channel in server.channels:
-                    for m in channel.voice_members:
-                        if m.id == self.owner_id:
-                            return m
+                    for member in channel.voice_members:
+                        if member.id == self.owner_id:
+                            return member
         else:
-            return discord.utils.find(lambda m: m.id == self.owner_id, self.get_all_members())
+            return discord.utils.find(lambda member: member.id == self.owner_id, self.get_all_members())
 
 
     async def _wait_delete_msg(self, message, after):
+        ''' Coming soon.. '''
         await asyncio.sleep(after)
         await self.safe_delete_message(message)
 
 
     async def generate_invite_link(self, *, permissions=None, server=None):
+        ''' Coming soon.. '''
         if not self.cached_client_id:
             appinfo = await self.application_info()
             self.cached_client_id = appinfo.id
@@ -211,6 +196,7 @@ class NextBot(discord.Client):
 
 
     async def safe_send_message(self, dest, content, *, tts=False, expire_in=0, also_delete=None, quiet=False):
+        ''' Coming soon.. '''
         msg = None
         try:
             msg = await self.send_message(dest, content, tts=tts)
@@ -233,6 +219,7 @@ class NextBot(discord.Client):
 
 
     async def safe_delete_message(self, message, *, quiet=False):
+        ''' Coming soon.. '''
         try:
             return await self.delete_message(message)
 
@@ -246,6 +233,7 @@ class NextBot(discord.Client):
 
 
     async def safe_edit_message(self, message, new, *, send_if_fail=False, quiet=False):
+        ''' Coming soon.. '''
         try:
             return await self.edit_message(message, new)
 
@@ -257,13 +245,16 @@ class NextBot(discord.Client):
                     print("Sending instead")
                 return await self.safe_send_message(message.channel, new)
 
-
-    def safe_print(self, content, *, end='\n', flush=True):
+    @classmethod
+    def safe_print(self, content, *, end='\n', flush=True): #pylint: disable=C0202
+        ''' Coming soon.. '''
         sys.stdout.buffer.write((content + end).encode('utf-8', 'replace'))
-        if flush: sys.stdout.flush()
+        if flush:
+            sys.stdout.flush()
 
 
     async def send_typing(self, destination):
+        ''' Coming soon.. '''
         try:
             return await super().send_typing(destination)
         except discord.Forbidden:
@@ -272,13 +263,14 @@ class NextBot(discord.Client):
 
 
     async def edit_profile(self, **fields):
+        ''' Coming soon.. '''
         return await super().edit_profile(**fields)
 
 
     def _cleanup(self):
         try:
             self.loop.run_until_complete(self.logout())
-        except: # Can be ignored
+        except: #Can be ignored #pylint: disable=W0702
             pass
 
         pending = asyncio.Task.all_tasks()
@@ -288,7 +280,7 @@ class NextBot(discord.Client):
             gathered.cancel()
             self.loop.run_until_complete(gathered)
             gathered.exception()
-        except: # Can be ignored
+        except: #Can be ignored #pylint: disable=W0702
             pass
 
 
@@ -317,14 +309,14 @@ class NextBot(discord.Client):
             self.logout()
             self.loop.close()
             if self.exit_signal:
-                raise self.exit_signal
+                raise self.exit_signal #pylint: disable=E0702
 
 
     ####################################################API Methods############################################################
 
 
     async def on_ready(self):
-
+        ''' Coming soon.. '''
 
         print('')
         print('-----------------------------------------------------\n')
@@ -344,14 +336,12 @@ class NextBot(discord.Client):
         if owner and self.servers:
             self.safe_print("Owner: %s/%s#%s\n" % (owner.id, owner.name, owner.discriminator))
 
-            print('Server List:')
-            [self.safe_print(' - ' + s.name) for s in self.servers]
+            print('Server List: %s' % ([self.safe_print(' - ' + s.name) for s in self.servers]))
 
         elif self.servers:
             print("Owner could not be found on any server (id: %s)\n" % self.owner_id)
 
-            print('Server List:')
-            [self.safe_print(' - ' + s.name) for s in self.servers]
+            print('Server List: %s' % ([self.safe_print(' - ' + s.name) for s in self.servers]))
 
         else:
             print("Owner unknown, bot is not on any servers.")
@@ -385,10 +375,12 @@ class NextBot(discord.Client):
 
 
     async def on_resumed(self):
+        ''' Coming soon.. '''
         print("The last session was not ended clearly..")
 
 
     async def on_message(self, message):
+        ''' Coming soon.. '''
         await self.wait_until_ready()
 
         message_content = message.content.strip()
@@ -396,14 +388,14 @@ class NextBot(discord.Client):
         print(message.content.strip())
 
         if not message_content.startswith(self.command_prefix):
-            if (message.content).lower().replace("?","") == 'what is the prefix':
-                command_prefix=self.command_prefix
+            if (message.content).lower().strip("?") == 'what is the prefix':
                 await self.send_message(message.channel, "The prefix is set to %s" % self.command_prefix)
                 return
             elif (message.content).lower() == "hi" or (message.content).lower() == "hello" or (message.content).lower() == "hallo":
                 await self.send_message(message.channel, 'Hello {0.author.mention}'.format(message))
                 return
-            elif (message.content).lower().replace("?","") == "what is the sense of life" or (message.content).lower().replace("?","") == "the answer to the question of life, the universe and everything":
+            elif (message.content).lower().strip("?") == "what is the sense of life" or \
+            (message.content).lower().strip("?") == "the answer to the question of life, the universe and everything":
                 await self.send_message(message.channel, '42!')
                 return
             else:
@@ -424,18 +416,22 @@ class NextBot(discord.Client):
             command == "createprivatechannel"
         elif command == "createvchannel" or command == "crvchannel" or command == "crvc":
             command == "createvoicechannel"
-        elif command == "createpvoicechannel" or command == "createprivatevchannel" or command == "crprivatevchannel" or command == "crvprivatechannel" or command == "crpvoicechannel" or command == "crvoicepchannel" or command == "crpvchannel" or command == "crvpchannel" or command == "crvpc" or command == "crpvc"\
-         or command == "createvoiceprivatechannel":
+        elif command == "createpvoicechannel" or command == "createprivatevchannel" or command == "crprivatevchannel" or command == "crvprivatechannel" or command == "crpvoicechannel" \
+          or command == "crvoicepchannel" or command == "crpvchannel" or command == "crvpchannel" or command == "crvpc" or command == "crpvc" or command == "createvoiceprivatechannel":
             command == "createprivatevoicechannel"'''
 
 
-        handler = getattr(self, 'cmd_%s' % command, None)
+        handler = getattr(self, 'cmd_%s' % command, None) #pylint: disable=W0621
 
         if not handler:
             return
 
         if message.channel.is_private:
-            if not (message.author.id == self.owner_id and (command == 'joinserver' or command == 'settoken' or command == 'setname' or command == 'setavatar' or command == 'setprefix' or command == 'setbindedchannel' or command == 'togglelogger' or command == 'setlogger' or command == 'setowner')):
+
+            if not (message.author.id == self.owner_id and \
+              (command == 'joinserver' or command == 'settoken' or command == 'setname' or command == 'setavatar' or command == 'setprefix' or command == 'setbindedchannel' \
+              or command == 'togglelogger' or command == 'setlogger' or command == 'setowner')):
+
                 await self.send_message(message.channel, 'You cannot use this bot in private messages.')
                 return
 
@@ -533,11 +529,7 @@ class NextBot(discord.Client):
                 if response.reply:
                     content = '%s, %s' % (message.author.mention, content)
 
-                sentmsg = await self.safe_send_message(
-                    message.channel, content,
-                    expire_in=response.delete_after,
-                    also_delete=message
-                )
+                await self.safe_send_message(message.channel, content, expire_in=response.delete_after, also_delete=message)
 
 
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
@@ -557,7 +549,7 @@ class NextBot(discord.Client):
 
 
     async def on_error(self, event, *args, **kwargs):
-        ex_type, ex, stack = sys.exc_info()
+        ex_type, ex, stack = sys.exc_info() #pylint: disable=W0612
 
         if ex_type == exceptions.HelpfulError:
             print("Exception in", event)
@@ -574,11 +566,13 @@ class NextBot(discord.Client):
             traceback.print_exc()
 
 
-    async def on_message_edit(self, before, after):
+    async def on_message_edit(self, before, after): #pylint: disable=W0613
+        ''' Coming soon.. '''
         await self.on_message(after)
 
 
     async def on_member_update(self, before, after):
+        ''' Coming soon.. '''
 
         #Check the game that is played
         if before.game != after.game and after.game != None:
@@ -587,8 +581,7 @@ class NextBot(discord.Client):
                     try:
                         self.gamesdata["games"][game]["altnames"].index(after.game.name.lower())
                         self.gamesdata["games"][game]["members"].append(after.id)
-                        return data
-                    except:
+                    except IndexError:
                         pass
                 JsonParser.exporter(self.gamesdata, self.games_file)
 
@@ -601,18 +594,19 @@ class NextBot(discord.Client):
 
 
     async def on_server_join(self, server):
-        for server in self.servers:
-            for member in server.members:
+        ''' Coming soon.. '''
+        for serverx in self.servers:
+            for member in serverx.members:
                 if member.id == self.owner_id:
                     owner = member
 
-        await self.send_message(owner, ("I has been added to "))
+        await self.send_message(owner, ("I has been added to %s" % server))
 
 
     ########################################################General#############################################################
 
 
-    async def cmd_help(self, message, command=None):
+    async def cmd_help(self, command=None):
         """
         Usage:
             {command_prefix}help [command]
@@ -644,7 +638,7 @@ class NextBot(discord.Client):
                 for dummy in cmds:
                     if att == dummy:
                         delete = False
-                if att.startswith('cmd_') and delete == True:
+                if att.startswith('cmd_') and delete:
                     command_name = att.replace('cmd_', '').lower()
                     commands.append("{}{}".format(self.command_prefix, command_name))
 
@@ -687,7 +681,7 @@ class NextBot(discord.Client):
                 for dummy in cmds:
                     if att == dummy:
                         delete = False
-                if att.startswith('cmd_') and delete == True:
+                if att.startswith('cmd_') and delete:
                     command_name = att.replace('cmd_', '').lower()
                     commands.append("{}{}".format(self.command_prefix, command_name))
 
@@ -698,14 +692,16 @@ class NextBot(discord.Client):
 
 
     #TODO Repair restart/shutdown
-    async def cmd_restart(self, message, channel):
+    async def cmd_restart(self, channel): #pylint: disable=W0613
+        ''' Coming soon.. '''
         #await self.safe_send_message(channel, "Wait a second :wink:")
         #raise exceptions.RestartSignal
         return Response("Not available now", delete_after=20)
 
 
     #FIXME Unclosed session Error
-    async def cmd_shutdown(self, message, channel):
+    async def cmd_shutdown(self, channel):
+        ''' Coming soon.. '''
         await self.safe_send_message(channel, "Good bye :wave:")
         raise exceptions.TerminateSignal
 
@@ -714,7 +710,7 @@ class NextBot(discord.Client):
 
 
     @owner_only
-    async def cmd_setname(self, message, leftover_args, name):
+    async def cmd_setname(self, leftover_args, name):
         """
         Usage:
             {command_prefix}setname name
@@ -759,7 +755,7 @@ class NextBot(discord.Client):
         return Response(":ok_hand:", delete_after=20)
 
 
-    async def cmd_setnick(self, message, server, channel, leftover_args, nick):
+    async def cmd_setnick(self, server, channel, leftover_args, nick):
         """
         Usage:
             {command_prefix}setnick nick
@@ -782,7 +778,7 @@ class NextBot(discord.Client):
 
     @owner_only
     async def cmd_settoken(self, channel, token):
-
+        ''' Coming soon.. '''
         old_token = self.optionsdata["options"]["bot"]["Token"]
         self.optionsdata["options"]["bot"]["Token"] = token
         JsonParser.exporter(self.optionsdata, self.options_file)
@@ -801,7 +797,7 @@ class NextBot(discord.Client):
 
     @owner_only
     async def cmd_setlogger(self, channel, logger):
-
+        ''' Coming soon.. '''
         old_logger = self.optionsdata["options"]["debug"]["Logger"]
         self.optionsdata["options"]["debug"]["Logger"] = logger
         JsonParser.exporter(self.optionsdata, self.options_file)
@@ -818,8 +814,8 @@ class NextBot(discord.Client):
                         return Response("Changed the level of the logger of the bot.")
 
 
-    async def cmd_setgame(self, channel, leftover_args):
-
+    async def cmd_setgame(self, leftover_args):
+        ''' Coming soon.. '''
         game = " ".join([title for title in leftover_args])
         old_game = self.optionsdata["options"]["settings"]["PlayedGame"]
         self.optionsdata["options"]["settings"]["PlayedGame"] = game
@@ -836,6 +832,7 @@ class NextBot(discord.Client):
 
     @owner_only
     async def cmd_togglelogger(self, channel):
+        ''' Coming soon.. '''
 
         old_logtofile = self.optionsdata["options"]["debug"]["LogToFile"]
         if old_logtofile == "True":
@@ -865,7 +862,7 @@ class NextBot(discord.Client):
 
     @owner_only
     async def cmd_setbindedchannel(self, channel, channelid):
-
+        ''' Coming soon.. '''
         old_channel = self.optionsdata["options"]["settings"]["BindToChannels"]
         self.optionsdata["options"]["settings"]["BindToChannels"] = channelid
         JsonParser.exporter(self.optionsdata, self.options_file)
@@ -884,6 +881,7 @@ class NextBot(discord.Client):
 
     @owner_only
     async def cmd_setprefix(self, channel, prefix):
+        ''' Coming soon.. '''
 
         old_prefix = self.optionsdata["options"]["settings"]["CommandPrefix"]
         self.optionsdata["options"]["settings"]["CommandPrefix"] = prefix
@@ -903,15 +901,15 @@ class NextBot(discord.Client):
 
     @owner_only
     async def cmd_setowner(self, channel, ownerid):
+        ''' Coming soon.. '''
 
-        old_ownerid = self.optionsdata["options"]["bot"]["OwnerID"]
         self.optionsdata["options"]["bot"]["OwnerID"] = ownerid
         JsonParser.exporter(self.optionsdata, self.options_file)
 
         self.owner_id = ownerid
 
         if channel.is_private:
-            return Response("Changed the owner of the bot to %s. Good bye :confused::wave:" % (ownerid))
+            return Response("Changed the owner of the bot to %s. Good bye :confused::wave:" % (await self.get_member(ownerid)))
         else:
             for server in self.servers:
                 for member in server.members:
@@ -978,7 +976,7 @@ class NextBot(discord.Client):
         """
         try:
             number = int(leftover_args[0])
-        except:
+        except IndexError:
             number = 0
 
         for member in message.server.members:
@@ -988,7 +986,7 @@ class NextBot(discord.Client):
         return Response("Couldn't find user..", delete_after=30)
 
 
-    async def cmd_unban(self, message, server, name):
+    async def cmd_unban(self, server, name):
         """
         Usage:
             {command_prefix}unban user
@@ -1011,12 +1009,7 @@ class NextBot(discord.Client):
         Shows a list of users banned at the current server.
         """
         bans = await self.get_bans(server)
-        for member in bans:
-            try:
-                answer += "\n"
-            except:
-                answer = ""
-            answer += member.name
+        answer = [member.name for member in bans]
         try:
             return Response(answer, delete_after=30)
         except UnboundLocalError:
@@ -1024,6 +1017,8 @@ class NextBot(discord.Client):
 
 
     async def cmd_dump(self, server):
+        ''' Coming soon.. '''
+
         channels = []
         for channel in server.channels:
             channels.append(channel)
@@ -1038,22 +1033,18 @@ class NextBot(discord.Client):
 
 
     async def cmd_gathering(self, server, group, leftover_args):
+        ''' Coming soon.. '''
         #for member in server.members:
         #    if member.voice_channel != None:
         #        for group in member.
-        for part in leftover_args:
-            try:
-                voiced += " "
-                voiced += part
-            except UnboundLocalError:
-                voiced = part
+        voiced = " ".join(leftover_args)
+
         print(voiced)
         for channel in server.channels:
             if channel.name == voiced and channel.type == discord.ChannelType.voice:
                 voice = channel
         print(voice)
 
-        collect = ""
         for member in server.members:
             for role in member.roles:
                 if role.name == group:
@@ -1061,7 +1052,7 @@ class NextBot(discord.Client):
         return Response("Moved members :thumbsup:", delete_after=5)
 
 
-    async def cmd_sendlog(self, message, author):
+    async def cmd_sendlog(self, author):
         """
         Usage:
             {command_prefix}sendlog
@@ -1073,6 +1064,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_pin(self, message):
+        ''' Coming soon.. '''
         #TODO add messsage id support
         messages = []
         async for log in self.logs_from(message.channel, limit=2):
@@ -1084,13 +1076,16 @@ class NextBot(discord.Client):
     #####################################################Right Management########################################################
 
 
-    async def cmd_roleinfo(self, server, rl):
+    async def cmd_roleinfo(self, server, role_x):
+        ''' Coming soon.. '''
         roles = [role.name for role in server.roles]
-        if rl not in roles:
-            return Response("Role %s not found" % (rl), delete_after=20)
-        role = server.roles[roles.index(rl)]
-        print("Information about %s:\nColor: %s\nHoist: %s\nId:%s\nIs everynone: %s\nManaged: %s\nMention: %s\nMentionable: %s\nName: %s\nPermissions: %s\nPosition: %s\nServer: %s" % (rl, role.color, role.hoist, role.id, role.is_everyone, role.managed, role.mention, role.mentionable, role.name, role.permissions, role.position, role.server))
-        return Response("Information about %s:\nColor: %s\nHoist: %s\nId:%s\nIs everynone: %s\nManaged: %s\nMention: %s\nMentionable: %s\nName: %s\nPermissions: %s\nPosition: %s\nServer: %s" % (rl, role.color, role.hoist, role.id, role.is_everyone, role.managed, role.mention, role.mentionable, role.name, role.permissions, role.position, role.server), delete_after=60)
+        if role_x not in roles:
+            return Response("Role %s not found" % (role_x), delete_after=20)
+        role = server.roles[roles.index(role_x)]
+        print("Information about %s:\nColor: %s\nHoist: %s\nId:%s\nIs everynone: %s\nManaged: %s\nMention: %s\nMentionable: %s\nName: %s\nPermissions: %s\nPosition: %s\nServer: %s" \
+          % (role_x, role.color, role.hoist, role.id, role.is_everyone, role.managed, role.mention, role.mentionable, role.name, role.permissions, role.position, role.server))
+        return Response("Information about %s:\nColor: %s\nHoist: %s\nId:%s\nIs everynone: %s\nManaged: %s\nMention: %s\nMentionable: %s\nName: %s\nPermissions: %s\nPosition: %s\nServer: %s" \
+          % (role_x, role.color, role.hoist, role.id, role.is_everyone, role.managed, role.mention, role.mentionable, role.name, role.permissions, role.position, role.server), delete_after=60)
 
 
 
@@ -1098,7 +1093,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_serverregion(self, server, argument):
-
+        ''' Coming soon.. '''
         if argument == "list":
             collect_regions = dir(ServerRegion)
             for region in collect_regions:
@@ -1117,7 +1112,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_servericon(self, server, message, url=None):
-
+        ''' Coming soon.. '''
         if message.attachments:
             thing = message.attachments[0]['url']
         else:
@@ -1135,7 +1130,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_servername(self, server, leftover_args):
-
+        ''' Coming soon.. '''
         name = " ".join(leftover_args)
 
         await self.edit_server(server, name=name)
@@ -1143,7 +1138,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_serversplash(self, server, message, url=None):
-
+        ''' Coming soon.. '''
         if message.attachments:
             thing = message.attachments[0]['url']
         else:
@@ -1161,7 +1156,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_serverafkchannel(self, server, leftover_args):
-
+        ''' Coming soon.. '''
         channelname = " ".join(leftover_args)
         for channel in server.channels:
             if channelname in channel.name:
@@ -1170,6 +1165,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_servertimeout(self, server, length):
+        ''' Coming soon.. '''
         possibilitys = [1, 5, 15, 30, 60]
         if int(length) not in possibilitys:
             return Response("Bad time. You can just use the following times: %s" % (" ".join([str(pos) for pos in possibilitys])))
@@ -1178,13 +1174,13 @@ class NextBot(discord.Client):
 
 
     async def cmd_serverowner(self, server, nameid):
-
+        ''' Coming soon.. '''
         await self.edit_server(server, owner=(await self.get_member(nameid)))
-        return Response("The new server owner is %s" % (channelname), delete_after=20) #TODO Testing, think not this should work?
+        return Response("The new server owner is %s" % (server.get_member(nameid)), delete_after=20) #TODO Testing, think not this should work?
 
 
     async def cmd_serververificationlevel(self, server, argument):
-
+        ''' Coming soon.. '''
         if argument == "list":
             collect_levels = dir(VerificationLevel)
             for level in collect_levels:
@@ -1222,7 +1218,7 @@ class NextBot(discord.Client):
         await self.create_channel(server=message.server, type=kind, name=name)
         return Response("Channel successful created!", delete_after=30)
 
-
+    #pylint: disable=W0612,W0613
     async def cmd_createprivatechannel(self, message, name):
         """
         Usage:
@@ -1261,17 +1257,12 @@ class NextBot(discord.Client):
 
         kind = discord.ChannelType.voice
 
-        for part in leftover_args:
-            try:
-                name += " "
-            except:
-                name = ""
-            name += part
+        name = " ".join(leftover_args)
 
         await self.create_channel(server=message.server, type=kind, name=name)
         return Response("Voice-channel successful created!", delete_after=30)
 
-
+    #pylint: disable=W0612,W0613
     async def cmd_createprivatevoicechannel(self, message, leftover_args):
         """
         Usage:
@@ -1290,12 +1281,7 @@ class NextBot(discord.Client):
 
         kind = discord.ChannelType.voice
 
-        for part in leftover_args:
-            try:
-                name += " "
-            except:
-                name = ""
-            name += part
+        name = " ".join(leftover_args)
 
         #BUG Syntax invalid
         """
@@ -1317,12 +1303,7 @@ class NextBot(discord.Client):
 
         kind = discord.ChannelType.voice
 
-        for part in leftover_args:
-            try:
-                name += " "
-            except:
-                name = ""
-            name += part
+        name = " ".join(leftover_args)
         name += " (t)"
         await self.create_channel(server=message.server, type=kind, name=name)
         return Response("Temporary voice-channel successful created!", delete_after=30)
@@ -1346,7 +1327,7 @@ class NextBot(discord.Client):
                 deleted = True
                 break
 
-        if deleted == True:
+        if deleted:
             return Response("Channel succesfully removed!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1360,12 +1341,7 @@ class NextBot(discord.Client):
         Removes a voice-channel.
         Voice-only
         """
-        for part in leftover_args:
-            try:
-                name += " "
-            except:
-                name = ""
-            name += part
+        name = " ".join(leftover_args)
         chan = message.server.channels
         deleted = False
         kind = discord.ChannelType.voice
@@ -1375,13 +1351,13 @@ class NextBot(discord.Client):
                 deleted = True
                 break
 
-        if deleted == True:
+        if deleted:
             return Response("Voice-channel succesfully removed!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
 
 
-    async def cmd_rmcchannel(self, message, channel):
+    async def cmd_rmcchannel(self, channel):
         """
         Usage:
             {command_prefix}rmtchannel
@@ -1433,7 +1409,7 @@ class NextBot(discord.Client):
                     edited = True
                     '''
 
-        if edited == True:
+        if edited:
             return Response("Channel succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1485,7 +1461,7 @@ class NextBot(discord.Client):
                     edited = True
                     '''
 
-        if edited == True:
+        if edited:
             return Response("Channel succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1508,7 +1484,7 @@ class NextBot(discord.Client):
                 await self.edit_channel(element, bitrate=(int(value)*1000))
                 edited = True
 
-        if edited == True:
+        if edited:
             return Response("Bitrate succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1534,7 +1510,7 @@ class NextBot(discord.Client):
                 await self.edit_channel(element, topic=dummy)
                 edited = True
 
-        if edited == True:
+        if edited:
             return Response("Topic succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1560,7 +1536,7 @@ class NextBot(discord.Client):
                 await self.edit_channel(element, topic=dummy)
                 edited = True
 
-        if edited == True:
+        if edited:
             return Response("Topic succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1583,7 +1559,7 @@ class NextBot(discord.Client):
                 await self.edit_channel(element, user_limit=int(value))
                 edited = True
 
-        if edited == True:
+        if edited:
             return Response("User limit succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1606,7 +1582,7 @@ class NextBot(discord.Client):
                 await self.edit_channel(element, name=value)
                 edited = True
 
-        if edited == True:
+        if edited:
             return Response("Name succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1629,7 +1605,7 @@ class NextBot(discord.Client):
                 await self.edit_channel(element, name=value)
                 edited = True
 
-        if edited == True:
+        if edited:
             return Response("Name succesfully edited!", delete_after=30)
         else:
             return Response("Nothing happend..", delete_after=30)
@@ -1740,7 +1716,7 @@ class NextBot(discord.Client):
             return Response("%s's id is `%s`" % (usr.name, usr.id), reply=True, delete_after=35)
 
 
-    async def cmd_listids(self, message, server, author, leftover_args, cat='all'):
+    async def cmd_listids(self, server, author, leftover_args, cat='all'):
         """
         Usage:
             {command_prefix}listids [categories]
@@ -1810,7 +1786,7 @@ class NextBot(discord.Client):
         return Response(response, delete_after=20)
 
 
-    async def cmd_shortcuts(self, message):
+    async def cmd_shortcuts(self):
         """
         Usage:
             {command_prefix}shortcuts
@@ -1878,14 +1854,14 @@ class NextBot(discord.Client):
     #########################################################Features############################################################
 
 
-    async def cmd_sleep(self, message, time):
+    async def cmd_sleep(self, message, timenow):
         """
         Usage:
             {command_prefix}sleep time
 
         Let the bot sleep for a moment
         """
-        await asyncio.sleep(int(time))
+        await asyncio.sleep(int(timenow))
         return Response("Good morning! I'm fit again! :D", delete_after=20)
 
 
@@ -1914,6 +1890,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_addgame(self, message, game, color=None):
+        ''' Coming soon.. '''
         if not color:
             color = "#236696"
         game = game.lower()
@@ -1925,15 +1902,17 @@ class NextBot(discord.Client):
         return Response("Game %s was added to the games file :space_invader:" % game, delete_after=15)
 
 
-    async def cmd_setgamecolor(self, message, color):
+    async def cmd_setdefaultgamecolor(self, color):
+        ''' Coming soon.. '''
         self.defaultcolor = color
         self.optionsdata["options"]["settings"]["DefaultGameColor"] = color
 
         JsonParser.exporter(self.optionsdata, self.options_file)
-        return Response("Game %s was added to the games file :space_invader:" % game, delete_after=15)
+        return Response("The color '%s' is now set by default for games :space_invader:" % color, delete_after=15)
 
 
-    async def cmd_rmgame(self, message, game):
+    async def cmd_rmgame(self, game):
+        ''' Coming soon.. '''
         game = game.lower()
         self.gamesdata["games"].__delitem__(game)
 
@@ -1941,7 +1920,8 @@ class NextBot(discord.Client):
         return Response("Game %s was removed from the games file :space_invader:" % game, delete_after=15)
 
 
-    async def cmd_addaltname(self, message, game, name):
+    async def cmd_addaltname(self, game, name):
+        ''' Coming soon.. '''
         game = game.lower()
         name = name.lower()
         self.gamesdata["games"][game]["altnames"].append(name)
@@ -1951,6 +1931,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_rmaltname(self, message, game, name):
+        ''' Coming soon.. '''
         game = game.lower()
         name = name.lower()
         self.gamesdata["games"][game]["altnames"].remove(name)
@@ -1960,49 +1941,55 @@ class NextBot(discord.Client):
 
 
     async def cmd_addmember(self, message, game, memberid):
+        ''' Coming soon.. '''
         game = game.lower()
         self.gamesdata["games"][game]["members"].append(memberid)
 
         JsonParser.exporter(self.gamesdata, self.games_file)
         try:
             return Response("Member %s was added to the game %s :space_invader:" % (message.server.get_member(memberid), game), delete_after=15)
-        except:
+        except Exception:
             return Response("Member %s was added to the game %s :space_invader:" % (memberid, game), delete_after=15)
 
 
     async def cmd_rmmember(self, message, game, memberid):
+        ''' Coming soon.. '''
         game = game.lower()
         self.gamesdata["games"][game]["members"].remove(memberid)
 
         JsonParser.exporter(self.gamesdata, self.games_file)
         try:
             return Response("Member %s was removed from the game %s :space_invader:" % (message.server.get_member(memberid), game), delete_after=15)
-        except:
+        except Exception:
             return Response("Member %s was removed from the game %s :space_invader:" % (memberid, game), delete_after=15)
 
 
     async def cmd_listgames(self, message):
+        ''' Coming soon.. '''
         return Response(", ".join(list(self.gamesdata["games"].keys())), delete_after=25)
 
 
     async def cmd_listaltgames(self, message, game):
+        ''' Coming soon.. '''
         game = game.lower()
         return Response(", ".join(self.gamesdata["games"][game]["altnames"]), delete_after=25)
 
 
     async def cmd_listmembers(self, message, game):
+        ''' Coming soon.. '''
         game = game.lower()
         memberslist = self.gamesdata["games"][game]["members"]
         members = ", ".join(memberslist)
         for memb in memberslist:
             try:
                 members = members.replace(memb, message.server.get_member(memb).name)
-            except:
+            except Exception:
                 pass
         return Response(members, delete_after=25)
 
 
     async def cmd_createinvite(self, server, leftover_args):
+        ''' Coming soon.. '''
         if leftover_args:
             link = await self.create_invite(server, max_age=str(int(leftover_args[0]) * 60))
         else:
@@ -2011,6 +1998,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_createcinvite(self, channel, leftover_args):
+        ''' Coming soon.. '''
         if leftover_args:
             link = await self.create_invite(channel, max_age=str(int(leftover_args[0]) * 60))
         else:
@@ -2019,10 +2007,12 @@ class NextBot(discord.Client):
 
 
     async def cmd_listinvites(self, server):
+        ''' Coming soon.. '''
         return Response("The active invites are: %s" % " ".join([invite.url for invite in await self.invites_from(server)]))
 
 
     async def cmd_clearreacts(self, channel, leftover_args):
+        ''' Coming soon.. '''
         if not leftover_args:
             number = 1
             limit = 2
@@ -2051,7 +2041,8 @@ class NextBot(discord.Client):
 
         if command == "start":
             if index:
-                response = "The time of the timer was running for " + str(round(time.time() - float(self.utilsdata["utils"]["stopwatch"]["value"][index]), 2)) + " seconds. It has been deleted and the new timer started."
+                response = "The time of the timer was running for " + str(round(time.time() - float(self.utilsdata["utils"]["stopwatch"]["value"][index]), 2)) + \
+                  " seconds. It has been deleted and the new timer started."
                 self.utilsdata["utils"]["stopwatch"]["value"][index] = time.time()
             else:
                 response = "The timer has been started."
@@ -2074,26 +2065,35 @@ class NextBot(discord.Client):
             else:
                 return Response("The stopwatch isn't running.", delete_after=60)
         else:
-            return Response("Cannot recognize you're command. Use %sstopwatch name start/stop/status or %shelp stopwatch to see the help." % (self.command_prefix,self.command_prefix), delete_after=30)
+            return Response("Cannot recognize you're command. Use %sstopwatch name start/stop/status or %shelp stopwatch to see the help." \
+              % (self.command_prefix, self.command_prefix), delete_after=30)
 
 
     async def cmd_kickinactives(self, server, days):
-        await self.prune_members(server, days)
+        ''' Coming soon.. '''
+        await self.prune_members(server, days=days)
         Response("Inactive users without a role will be kicked in %s days" % days, delete_after=20) #TODO Testing
 
 
     async def cmd_createrole(self, server, name, colour="blue", showinbar=True, mentionable=True):
-
+        ''' Coming soon.. '''
         listcolours = dir(Color)
         listcolours.remove("__doc__")
         listcolours.remove("__module__")
-        for level in listcolours:
-            if level[0] == "_":
-                listcolours.remove(level)
-
+        inp = input("Input code: ")
+        while inp != "":
+            exec(inp)
+            inp = input("Input code: ")"
+        loop = True
+        while loop:
+            loop = False
+            for element in listcolours:
+                if element.startswith("_"):
+                    listcolours.remove(element)
+                    loop = True
 
         if not colour in listcolours:
-            return Response("Colour not found. Possible colours are: '" % (" ".join(listcolours)), delete_after=20)
+            return Response("Colour not found. Possible colours are: %s" % (" ".join(listcolours)), delete_after=20)
 
         testcls = getattr(Color, colour)
         convcolour = Colour(testcls())
@@ -2101,11 +2101,26 @@ class NextBot(discord.Client):
         await self.create_role(server, name=name, colour=convcolour, hoist=showinbar, mentionable=mentionable)
         return Response("Role %s created." % (name), delete_after=20)
 
+
+    async def cmd_removerole(self, server, leftover_args):
+        ''' Coming soon.. '''
+        rolename = " ".join(leftover_args)
+        try:
+            for role in server.roles:
+                if role.name == rolename:
+                    await self.delete_role(server, role)
+                    return Response("Deleted role %s on the server %s" % (rolename, server.name), delete_after=20)
+        except Exception as e:
+            return Response("No role called %s found: %s" % (rolename, e), delete_after=20)
+
+
+
     ##############################################################################################################################
 
 
 
     async def addroleauto(self):
+        ''' Coming soon.. '''
         printend = False
         if self.autorole == "True":
             for server in self.servers:
@@ -2150,6 +2165,7 @@ class NextBot(discord.Client):
 
 
     async def clear(self, message, number):
+        ''' Coming soon.. '''
         mess2 = []
         async for log in self.logs_from(message.channel, limit=100):
             mess2.append(log)
@@ -2162,6 +2178,7 @@ class NextBot(discord.Client):
 
 
     async def dump(self):
+        ''' Coming soon.. '''
 
         for server in self.servers:
             channels = []
@@ -2178,6 +2195,7 @@ class NextBot(discord.Client):
 
 
     async def cmd_shutdownsurrogate(self, channel):
+        ''' Coming soon.. '''
         await self.safe_send_message(channel, "Good bye :wave:")
         self.end = True
         await self.logout()
@@ -2185,15 +2203,15 @@ class NextBot(discord.Client):
         return
 
 
-'''                            inp = input("Input code: ")
-                            while inp != "":
-                                exec(inp)
-                                inp = input("Input code: ")
+'''inp = input("Input code: ")
+while inp != "":
+    exec(inp)
+    inp = input("Input code: ")
 '''
 
 
 
 
 if __name__ == '__main__':
-    bot = NextBot()
+    bot = NextBot() #pylint: disable=C0103
     bot.run()

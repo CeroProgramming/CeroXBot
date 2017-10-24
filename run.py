@@ -192,7 +192,7 @@ def main():
                 break
 
         except Exception as e:
-            if hasattr(e, '__module__') and e.__module__ == 'musicbot.exceptions':
+            if hasattr(e, '__module__') and e.__module__ == 'bot.exceptions':
                 if e.__class__.__name__ == 'HelpfulError':
                     print(e.message)
                     break
