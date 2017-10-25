@@ -13,6 +13,7 @@ from io import BytesIO
 from functools import wraps
 from textwrap import dedent
 from collections import defaultdict
+from pprint import pprint
 
 import aiohttp
 
@@ -146,6 +147,15 @@ class NextBot(discord.Client):
             Grab the files back from the archive or remake them yourself and copy paste the content \n \
             from the repo.  Stop removing important files!")
             raise exceptions.TerminateSignal
+
+        self.history_file = "history.json"
+        self.history = JsonParser.importer(self.history_file)
+        if self.history == "ErrorNoFileFound":
+            self.safe_print("Your config files are missing.  Neither games.json nor example_games.json were found.,\n \
+            Grab the files back from the archive or remake them yourself and copy paste the content \n \
+            from the repo.  Stop removing important files!")
+            raise exceptions.TerminateSignal
+
 
 
     #TODO Add some sort of `denied` argument for a message to send when someone else tries to use it
@@ -370,6 +380,12 @@ class NextBot(discord.Client):
         await self.addroleauto()
 
 
+        for server in self.servers:
+            if not server.name in self.history["servers"].keys():
+                self.history["servers"][server.name] = dict()
+                JsonParser.exporter(self.history, self.history_file)
+
+
         #Clear temporary channel sequenze:
         await self.dump()
 
@@ -584,6 +600,16 @@ class NextBot(discord.Client):
                     except IndexError:
                         pass
                 JsonParser.exporter(self.gamesdata, self.games_file)
+
+
+            try:
+                if not after.game.name in self.history["servers"][after.server.name][after.id]:
+                    self.history["servers"][after.server.name][after.id].append(after.game.name)
+                    JsonParser.exporter(self.history, self.history_file)
+            except KeyError:
+                self.history["servers"][after.server.name][after.id] = list()
+                self.history["servers"][after.server.name][after.id].append(after.game.name)
+                JsonParser.exporter(self.history, self.history_file)
 
 
         elif before.game != after.game and after.game != None and self.statustimer == 2:
@@ -2080,10 +2106,6 @@ class NextBot(discord.Client):
         listcolours = dir(Color)
         listcolours.remove("__doc__")
         listcolours.remove("__module__")
-        inp = input("Input code: ")
-        while inp != "":
-            exec(inp)
-            inp = input("Input code: ")"
         loop = True
         while loop:
             loop = False
@@ -2104,14 +2126,51 @@ class NextBot(discord.Client):
 
     async def cmd_removerole(self, server, leftover_args):
         ''' Coming soon.. '''
-        rolename = " ".join(leftover_args)
-        try:
-            for role in server.roles:
-                if role.name == rolename:
-                    await self.delete_role(server, role)
-                    return Response("Deleted role %s on the server %s" % (rolename, server.name), delete_after=20)
-        except Exception as e:
-            return Response("No role called %s found: %s" % (rolename, e), delete_after=20)
+        rname = " ".join(leftover_args)
+        for role in server.roles:
+            if role.name == rname:
+                await self.delete_role(server, role)
+                return Response("Deleted role %s on the server %s" % (rname, server.name), delete_after=20)
+        return Response("No role called %s found" % (rname), delete_after=20)
+
+
+    async def cmd_moverole(self, server, rname, position):
+        ''' Coming soon.. '''
+        for role in server.roles:
+            if role.name == rname:
+                try:
+                    await self.move_role(server, role, int(position))
+                    return Response("Removed role %s to position %s." % (rname, position), delete_after=20)
+                except discord.errors.HTTPException:
+                    return Response("Error with the permissions. I'm not able to move roles that are above my highest role.", delete_after=20)
+        return Response("Role not found.", delete_after=20)
+
+
+    async def cmd_gamehistory(self, server, leftover_args):
+        ''' Coming soon.. '''
+        if leftover_args:
+            mid = leftover_args[0]
+            for member in server.members:
+                if member.id == mid:
+                    res = "The games that %s played are:" % member.name
+                    try:
+                        for game in self.history['servers'][server.name][member.id]:
+                            res += "\n  %s" % game
+                    except KeyError:
+                        res += "\n None"
+                    finally:
+                        return Response(res, delete_after=45)
+        else:
+            res = "The globally history is:"
+            for member in server.members:
+                res += "\nThe games that %s played are:" % member.name
+                try:
+                    for game in self.history['servers'][server.name][member.id]:
+                        res += "\n  %s" % game
+                except KeyError:
+                    res += "\n  None"
+            return Response(res, delete_after=45)
+
 
 
 

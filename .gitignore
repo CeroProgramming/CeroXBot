@@ -4,11 +4,10 @@
 
 
 discord.log
-config/options.ini
 config/options.json
-config/permissions.ini
 config/permissions.json
 config/games.json
 config/utils.json
+config/history.json
 bot/__pycache__
 tmp
