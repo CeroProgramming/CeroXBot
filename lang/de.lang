@@ -1,0 +1,4 @@
+modules.base.selected_language=Du hast deutsch ausgewählt. Du kannst die Sprache später in config/options.ini ändern.
+modules.base.badinput=Fehlerhafte Eingabe..
+modules.base.clientid=Wie lautet die Client ID? (Nicht deine ID!)
+modules.base.clientsecret=Wie lautet der Client Secret?
