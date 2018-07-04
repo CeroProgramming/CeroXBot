@@ -1,4 +1,6 @@
 modules.base.selected_language=You've selected english. You can change the language later in config/options.ini.
 modules.base.badinput=Bad input..
-modules.base.clientid=What's the client's ID? (Not your ID!)
-modules.base.clientsecret=What's the client secret?
+modules.base.clientid=What's the clients ID? (Not your ID!)
+modules.base.clientsecret=What's the clients secret?
+modules.base.token=What's the clients token? (Not the client secret!)
+modules.base.ownerid=What's the owners ID? (Probably your ID, you find it by activating Settings->Appearance->'Enable Developer Mode' and right-click at user->'Copy ID')

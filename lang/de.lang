@@ -2,3 +2,5 @@ modules.base.selected_language=Du hast deutsch ausgewählt. Du kannst die Sprach
 modules.base.badinput=Fehlerhafte Eingabe..
 modules.base.clientid=Wie lautet die Client ID? (Nicht deine ID!)
 modules.base.clientsecret=Wie lautet der Client Secret?
+modules.base.token=Wie lautet der Token des Bots? (Nicht der Client Secret!)
+modules.base.owner=WIe lautet die ID des Besitzers? (Wahrscheinlich deine ID, du findest sie durch Aktivierung von Einstellungen->Erscheinungsbild->'Entwicklermodus' und Rechtsklick auf den User ->'ID kopieren')

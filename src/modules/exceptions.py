@@ -1,0 +1,2 @@
+class MissingServer(Exception):
+    pass
