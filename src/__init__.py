@@ -14,6 +14,3 @@ __author__ = 'CeroProgramming'
 __license__ = 'MIT'
 __copyright__ = 'Copyright 2018 CeroProgramming'
 __version__ = '0.0.1alpha'
-
-
-from .libs.cxjson import load, dump

@@ -3,4 +3,4 @@ from .base import Base
 class Channel(Base):
 
     def __init__(self):
-        super().__init__()
+        super(Channel, self).__init__()

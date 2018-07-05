@@ -1,6 +1,7 @@
-from bot import Bot
+from cxbot import CXBot
+from modules.exceptions import MissingServer
 
-cxbot = Bot()
+cxbot = CXBot()
 
 try:
     cxbot.loop.run_until_complete(cxbot.start(cxbot.c.token))
