@@ -15,6 +15,9 @@ class Config(object):
             self.options = ConfigParser()
             self.options.add_section('Miscellaneous')
             self.options.add_section('Properties')
+            self.options.add_section('Logging')
+            self.options.add_section('Games')
+            self.options.add_section('Permissions')
             language = -1
             while not language in [0, 1]:
                 print('English[0] / Deutsch[1]')
@@ -166,7 +169,6 @@ class Config(object):
         self.__read()
         return self.options.get('Properties', 'autoSetNickname')
 
-
     @autoSetNickname.setter
     def autoSetNickname(self, n):
         if n == '0':
@@ -177,13 +179,158 @@ class Config(object):
             self.options.set('Properties', 'autoSetNickname', 'once')
         self.__write()
 
+    @property
+    def prefix(self):
+        self.__read()
+        return self.options.get('Properties', 'prefix')
 
+    @prefix.setter
+    def prefix(self, n):
+        self.options.set('Properties', 'prefix', n)
+        self.__write()
 
+    @property
+    def logging(self):
+        self.__read()
+        return self.options.get('Logging', 'logging')
 
+    @autoSetNickname.setter
+    def logging(self, n):
+        if n:
+            self.options.set('Logging', 'logging', 'True')
+        else:
+            self.options.set('Logging', 'logging', 'False')
+        self.__write()
 
+    @property
+    def logMessages(self):
+        self.__read()
+        return self.options.get('Logging', 'logMessages')
 
+    @logMessages.setter
+    def logMessages(self, n):
+        if n:
+            self.options.set('Logging', 'logMessages', 'True')
+        else:
+            self.options.set('Logging', 'logMessages', 'False')
+        self.__write()
 
+    @property
+    def logBotActivities(self):
+        self.__read()
+        return self.options.get('Logging', 'logBotActivities')
 
+    @logBotActivities.setter
+    def logBotActivities(self, n):
+        if n:
+            self.options.set('Logging', 'logBotActivities', 'True')
+        else:
+            self.options.set('Logging', 'logBotActivities', 'False')
+        self.__write()
+
+    @property
+    def logUserActivities(self):
+        self.__read()
+        return self.options.get('Logging', 'logUserActivities')
+
+    @logUserActivities.setter
+    def logUserActivities(self, n):
+        if n:
+            self.options.set('Logging', 'logUserActivities', 'True')
+        else:
+            self.options.set('Logging', 'logUserActivities', 'False')
+        self.__write()
+
+    @property
+    def trackGameHistory(self):
+        self.__read()
+        return self.options.get('Games', 'trackGameHistory')
+
+    @trackGameHistory.setter
+    def trackGameHistory(self, n):
+        if n:
+            self.options.set('Games', 'trackGameHistory', 'True')
+        else:
+            self.options.set('Games', 'trackGameHistory', 'False')
+        self.__write()
+
+    @property
+    def trackGameStatistics(self):
+        self.__read()
+        return self.options.get('Games', 'trackGameStatistics')
+
+    @trackGameStatistics.setter
+    def trackGameStatistics(self, n):
+        if n:
+            self.options.set('Games', 'trackGameStatistics', 'True')
+        else:
+            self.options.set('Games', 'trackGameStatistics', 'False')
+        self.__write()
+
+    @property
+    def autoCreateGameRoles(self):
+        self.__read()
+        return self.options.get('Games', 'autoCreateGameRoles')
+
+    @autoCreateGameRoles.setter
+    def autoCreateGameRoles(self, n):
+        if n:
+            self.options.set('Games', 'autoCreateGameRoles', 'True')
+        else:
+            self.options.set('Games', 'autoCreateGameRoles', 'False')
+        self.__write()
+
+    @property
+    def autoCreateTemporaryGameRoles(self):
+        self.__read()
+        return self.options.get('Games', 'autoCreateTemporaryGameRoles')
+
+    @autoCreateTemporaryGameRoles.setter
+    def autoCreateTemporaryGameRoles(self, n):
+        if n:
+            self.options.set('Games', 'autoCreateTemporaryGameRoles', 'True')
+        else:
+            self.options.set('Games', 'autoCreateTemporaryGameRoles', 'False')
+        self.__write()
+
+    @property
+    def autoAddGames(self):
+        self.__read()
+        return self.options.get('Games', 'autoAddGames')
+
+    @autoAddGames.setter
+    def autoAddGames(self, n):
+        if n:
+            self.options.set('Games', 'autoAddGames', 'True')
+        else:
+            self.options.set('Games', 'autoAddGames', 'False')
+        self.__write()
+
+    @property
+    def autoGiveGameRoles(self):
+        self.__read()
+        return self.options.get('Games', 'autoGiveGameRoles')
+
+    @autoGiveGameRoles.setter
+    def autoGiveGameRoles(self, n):
+        if n:
+            self.options.set('Games', 'autoGiveGameRoles', 'True')
+        else:
+            self.options.set('Games', 'autoGiveGameRoles', 'False')
+        self.__write()
+
+    @property
+    def defaultCommandPermissions(self):
+        self.__read()
+        return self.options.get('Permissions', 'defaultCommandPermissions')
+
+    @defaultCommandPermissions.setter
+    def defaultCommandPermissions(self, n):
+        if n:
+            self.options.set('Permissions', 'defaultCommandPermissions', 'True')
+        else:
+            self.options.set('Permissions', 'defaultCommandPermissions', 'False')
+        self.__write()
 
 
 

@@ -1,9 +1,27 @@
-## TODO
+## TODO CeroXBot
 
 ### Bot
 
 - [ ] help
 - [ ] setup
+  - [x] name
+  - [x] nickname
+  - [x] autoSetNickname
+  - [x] avatar
+  - [x] prefix
+  - [x] logging
+  - [x] logMessages
+  - [x] logBotActivities
+  - [x] logUserActivities
+  - [x] trackGameHistory
+  - [x] trackGameStatistics
+  - [x] autoCreateGameRoles
+  - [x] autoCreateTemporaryGameRoles
+  - [x] autoAddGames
+  - [x] autoGiveGameRoles
+  - [ ] defaultCommandPermissions
+  - [ ] {whitelist users}
+  - [ ] credits and initial information
 - [ ] restart
 - [ ] shutdown
 - [ ] transfer
@@ -42,6 +60,7 @@
 - [ ] get/add/del invites [time for add]
 - [ ] clear [temporary]
 - [ ] info
+- [ ] get members
 
 
 
@@ -68,6 +87,7 @@
 - [ ] deny
 - [ ] get info/id
 - [ ] list (id/ids)
+- [ ] permission [channel]
 
 
 
@@ -114,3 +134,4 @@
 - [ ] AI Features
 - [ ] Language File
 - [ ] Remote Access [Maybe with rpyc?]
+- [ ] add/get/del executionByReaction

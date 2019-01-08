@@ -13,14 +13,12 @@ from discord import Client
 from logging import basicConfig, getLogger, FileHandler, Formatter, CRITICAL, ERROR, WARNING, INFO, DEBUG
 
 
-
 logger = getLogger('discord')
-logger.setLevel(INFO)
-logpath = 'logs/discord.log'
-handler = FileHandler(filename=logpath, encoding='utf-8', mode='w')
+logger.setLevel(DEBUG)
+log_path = 'logs/discord.log'
+handler = FileHandler(filename=log_path, encoding='utf-8', mode='w')
 handler.setFormatter(Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
-
 
 
 class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
@@ -41,27 +39,21 @@ class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
             print('Logged on as %s!' % self.user)
 
             if len(self.servers) == 0:
-                print('You have to connect me to a server. Open https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=0' % self.c.clientID)
+                print('You have to connect me to a server. Open https://discordapp.com/oauth2/authorize?client_id=%s\
+                    &scope=bot&permissions=0' % self.c.clientID)
                 await self.logout()
                 await self.close()
 
             elif len(self.servers) > 1:
                 print('Connected to the following servers:\n\t%s' % '\n\t'.join(self._server_names()))
-                print('You connected me to multiple servers. Note that you may want to use multiple instances of this bot because otherwise all settings will be the same for all connected servers.')
+                print('You connected me to multiple servers. Note that you may want to use multiple instances of this \
+                    bot because otherwise all settings will be the same for all connected servers and some functions \
+                    may could interfere in this state of development.')
             else:
                 print('Connected to the server %s' % self._server_names()[0])
 
             if self.c.firstStart:
                 await self.setup()
-
-
-
-
-
-
-
-
-
 
     async def on_resumed(self):
         pass
@@ -73,7 +65,7 @@ class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
         pass
 
     async def on_message_delete(self, message):
-        pass #Increase Clients max_messages for more cached messages
+        pass  # Increase Clients max_messages for more cached messages
 
     async def on_message_edit(self, before, after):
         pass
@@ -109,7 +101,7 @@ class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
         pass
 
     async def on_server_remove(self, server):
-        pass #Includes banned, kicked, left, really removed
+        pass  # Includes banned, kicked, left, really removed
 
     async def on_server_update(self, before, after):
         pass
@@ -126,14 +118,14 @@ class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
     async def on_server_emojis_update(self, before, after):
         pass
 
-    async def on_server_avaiable(self, server):
+    async def on_server_available(self, server):
         pass
 
-    async def on_server_unavaiable(self, server):
+    async def on_server_unavailable(self, server):
         pass
 
     async def on_voice_state_update(self, before, after):
-        pass #leave join mute deaf
+        pass  # leave join mute deaf
 
     async def on_member_ban(self, member):
         pass
@@ -150,9 +142,6 @@ class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
     async def on_group_remove(self, channel, user):
         pass
 
-
-
-
-    async def shutdown(self): #TODO Test
+    async def shutdown(self):  # TODO Test
         await self.logout()
         await self.close()
