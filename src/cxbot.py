@@ -1,6 +1,7 @@
 from modules.base import Base
 from modules.setup import Setup
 from modules.bot import Bot
+from modules.io import IO
 from modules.server import Server
 from modules.channel import Channel
 from modules.user import User
@@ -21,7 +22,7 @@ handler.setFormatter(Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'
 logger.addHandler(handler)
 
 
-class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
+class CXBot(Client, Setup, Bot, IO, Server, Channel, User, Role, Features, Base):
 
     def __init__(self):
         super(CXBot, self).__init__()
@@ -62,7 +63,7 @@ class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
         print(event)
 
     async def on_message(self, message):
-        pass
+        self.io_message(message.channel, message.content)
 
     async def on_message_delete(self, message):
         pass  # Increase Clients max_messages for more cached messages

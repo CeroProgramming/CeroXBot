@@ -24,7 +24,7 @@ class Setup(object):
                 message = await self.wait_for_message(timeout=None, author=owner)
                 await self.edit_profile(username=message.content)
             await self.send_typing(owner)
-            await self.send_message(owner, content='Do you like to give me a nickname? (No/Yes)')
+            await self.send_message(owner, content='Do you like me to have a nickname? (No/Yes)')
             b = await self._wait_for_bool(owner)
             if b:
                 await self.send_typing(owner)
@@ -35,6 +35,8 @@ class Setup(object):
                 await self.send_message(owner, content='Shall I try to set my nickname? (Never[0]/Always[1]/Only if added\
                     to a new server[2]')
                 self.c.autoSetNickname = await self._wait_for_list(owner, ['0', '1', '2'])
+            else:
+                del self.c.nickname
             await self.send_typing(owner)
             await self.send_message(owner, content='Do you like to set my avatar now? (No/Yes)')
             b = await self._wait_for_bool(owner)
@@ -59,6 +61,8 @@ class Setup(object):
                 while message.content.endswith(' '):
                     message.content = message.content[:-1]
                 self.c.prefix = message.content
+            else:
+                del self.c.prefix
             await self.send_typing(owner)
             await self.send_message(owner, content="Shall I save logs? (No/Yes)")
             self.c.logging = await self._wait_for_bool(owner)
@@ -73,6 +77,10 @@ class Setup(object):
                 await self.send_typing(owner)
                 await self.send_message(owner, content='Shall I log all public available user data like online time and played games? (this may or may not generate huge amounts of data) (No/Yes)')
                 self.c.logUserActivities = await self._wait_for_bool(owner)
+            else:
+                self.c.logMessages = False
+                self.c.logBotActivities = False
+                self.c.logUserActivities = False
             await self.send_typing(owner)
             await self.send_message(owner, content='Do you want me to track all played games? (some functions will not work otherwise) (No/Yes)')
             self.c.trackGameHistory = await self._wait_for_bool(owner)
@@ -89,15 +97,32 @@ class Setup(object):
                 await self.send_typing(owner)
                 await self.send_message(owner, content='Do you want me to automatically append roles to users that play the respective game? (No/Yes)')
                 self.c.autoGiveGameRoles = await self._wait_for_bool(owner)
+                self.c.autoCreateTemporaryGameRoles = False # TODO outsource into config,py
             else:
                 await self.send_typing(owner)
                 await self.send_message(owner, content='Do you want me to automatically create and append temporary roles for played games? (No/Yes)')
                 self.c.autoCreateTemporaryGameRoles = await self._wait_for_bool(owner)
+                self.c.autoAddGames = False
+                self.c.autoGiveGameRoles = False
             await self.send_typing(owner)
             await self.send_message(owner, content='You can choose between several settings of default user persmissions. You can manually edit them later on.')
             await self.send_typing(owner)
-            await self.send_message(owner, content='0: No one except you can use any command unless you explicit allow it later on. | 1: Users can per default use several harmless features like surveys and reminders. (suggested) | 2: Users can per default use the same as in 1 and have some special commands for temporary channels and such things. | 3: Users can per default administrate the complete server (THIS COULD BE DANGEROUS IF YOU DO NOT TRUST YOUR SERVER MEMBERS!!) ')
-            self.c.defaultCommandPermissions = await self._wait_for_bool(owner)
+            await self.send_message(owner, content='0: No one except you can use any command unless you explicit allow it later on.')
+            await self.send_typing(owner)
+            await self.send_message(owner, content='1: Users can per default use several harmless features like surveys and reminders. (suggested)')
+            await self.send_typing(owner)
+            await self.send_message(owner, content='2: Users can per default use the same as in 1 and have some special commands for temporary channels and such things.')
+            await self.send_typing(owner)
+            await self.send_message(owner, content='3: Users can per default administrate the complete server (THIS COULD BE DANGEROUS IF YOU DO NOT TRUST YOUR SERVER MEMBERS!!)')
+            self.c.defaultCommandPermissions = await self._wait_for_number(owner, 0, 3)
+            await self.send_typing(owner)
+            await self.send_message(owner, content='.')
+            await self.send_typing(owner)
+            await self.send_message(owner, content='.')
+            await self.send_typing(owner)
+            await self.send_message(owner, content='.')
+            await self.send_typing(owner)
+            await self.send_message(owner, content='```This bot was written by CeroProgramming aka Simon Deckwert. \nIt is licensed under the MIT license. \nIf you want to see the source, visit https://github.com/CeroProgramming/CeroXBot \nIf you find any bugs or feature requests, you can open an issue at https://github.com/CeroProgramming/CeroXBot/issues \nTo see all commands, type %shelp . To see more information about a command, type %shelp \'command\' \nIf you havn\'t already done, you can apply this bot to a server here: https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=0```' % (self.c.prefix, self.c.prefix, self.c.clientID))
 
 
         except Exception as e:

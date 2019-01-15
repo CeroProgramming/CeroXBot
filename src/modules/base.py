@@ -41,3 +41,22 @@ class Base(object):
             await self.send_message(author, content='No picture send..')
             message = await self.wait_for_message(timeout=None, author=author)
         return message.attachments[0]['url']
+
+    async def _wait_for_number(self, author, mi, ma):
+        message = await self.wait_for_message(timeout=None, author=author)
+        b = True
+        while message.content.endswith(' '):
+            message.content = message.content[:-1]
+        if message.content.isdecimal():
+            if int(message.content) >= mi and int(message.content) <= ma:
+                b = False
+        while b:
+            await self.send_typing(author)
+            await self.send_message(author, content='Message is no number or not in the range of %s and %s..' % (mi, ma))
+            message = await self.wait_for_message(timeout=None, author=author)
+            while message.content.endswith(' '):
+                message.content = message.content[:-1]
+            if message.content.isdecimal():
+                if int(message.content) >= mi and int(message.content) <= ma:
+                    b = False
+        return int(message.content)

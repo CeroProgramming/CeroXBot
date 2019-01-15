@@ -1,6 +1,10 @@
 tmp/
 config/options.ini
 config/options.cfg
+config/permissions.json
+
+.goutputstream*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
