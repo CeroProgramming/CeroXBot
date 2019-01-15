@@ -1,15 +1,10 @@
-import asyncio
-
-class IO(object):
-
+class Output(object):
 
     def __init__(self):
         pass
 
     async def io_message(self, content, destintation):
         self.send_typing(destintation)
-        await asyncio.sleep(3)
-
         self.send_message(destintation, content)
         return
 
