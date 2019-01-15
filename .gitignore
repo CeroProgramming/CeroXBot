@@ -5,6 +5,7 @@ config/permissions.json
 
 .goutputstream*
 
+logs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

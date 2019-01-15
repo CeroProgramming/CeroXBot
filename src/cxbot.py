@@ -10,9 +10,11 @@ from modules.features import Features
 from modules.config import Config
 from modules.exceptions import MissingServer
 
-from discord import Client
-from logging import basicConfig, getLogger, FileHandler, Formatter, CRITICAL, ERROR, WARNING, INFO, DEBUG
+from libs.logger import Logger
 
+from discord import Client, Color
+from logging import basicConfig, getLogger, FileHandler, Formatter, CRITICAL, ERROR, WARNING, INFO, DEBUG
+from datetime import datetime
 
 logger = getLogger('discord')
 logger.setLevel(DEBUG)
@@ -32,6 +34,11 @@ class CXBot(Client, Setup, Bot, IO, Server, Channel, User, Role, Features, Base)
         self.max_messages = 20000
         self.ready = False
 
+        self.logger = Logger('logs/%s.log' % datetime.now().date().isoformat())
+
+        self.busy = False
+
+    @Base.excep
     async def on_ready(self):
 
         if not self.ready:
@@ -54,7 +61,9 @@ class CXBot(Client, Setup, Bot, IO, Server, Channel, User, Role, Features, Base)
                 print('Connected to the server %s' % self._server_names()[0])
 
             if self.c.firstStart:
+                self.busy = True
                 await self.setup()
+                self.busy = False
 
     async def on_resumed(self):
         pass
@@ -62,14 +71,31 @@ class CXBot(Client, Setup, Bot, IO, Server, Channel, User, Role, Features, Base)
     async def on_error(self, event, *args, **kwargs):
         print(event)
 
+    @Base.excep
     async def on_message(self, message):
-        self.io_message(message.channel, message.content)
+
+        if self.c.logMessages:
+            self.logger.log_message(message)
+
+        if self.busy:
+            return
+
+        if not message.author == self.user:
+            print(message.content)
+            e = await self.create_embed("Github CeroProgramming", "https://github.com/CeroProgramming", "GitHub Profile URL", Color.dark_purple(), "CeroProgramming", "https://github.com/CeroProgramming/", "https://avatars3.githubusercontent.com/u/22818389?s=460&v=4", "https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fimage.freepik.com%2Ffree-icon%2Fgithub-logo_318-53553.jpg&f=1")
+            await self.io_embed(message.channel, e)
+
+        if message.content == "shutdown":
+            await self.shutdown()
 
     async def on_message_delete(self, message):
         pass  # Increase Clients max_messages for more cached messages
 
     async def on_message_edit(self, before, after):
-        pass
+
+        if self.c.logMessages:
+            if before.content != after.content or before.embeds != after.embeds or before.attachments != after.attachments:
+                self.logger.log_message_change(before, after)
 
     async def on_reaction_add(self, reaction, user):
         pass

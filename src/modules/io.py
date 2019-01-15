@@ -1,27 +1,28 @@
 import asyncio
+from discord import Embed
+
 
 class IO(object):
-
 
     def __init__(self):
         pass
 
-    async def io_message(self, content, destintation):
-        self.send_typing(destintation)
-        await asyncio.sleep(3)
-
-        self.send_message(destintation, content)
+    async def io_message(self, destintation, content):
+        await self.send_typing(destintation)
+        await asyncio.sleep(0.5)
+        await self.send_message(destintation, content)
         return
 
-    async def io_embed(self, embed, destintation):
-        self.send_typing(destintation)
-        self.send_message(destintation, embed=embed)
+    async def io_embed(self, destintation, embed):
+        await self.send_typing(destintation)
+        await asyncio.sleep(0.5)
+        await self.send_message(destintation, embed=embed)
 
-    async def create_embed(self, title, url, description):
-        embed = discord.Embed(title="Github CeroProgramming", url="https://github.com/", description="GitHub Profile URL", color=0xc200ff)
-        embed.set_author(name="CeroProgramming", url="https://github.com/CeroProgramming",, icon_url="https://avatars3.githubusercontent.com/u/22818389?s=460&v=4")
-        embed.set_thumbnail(url="https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fimage.freepik.com%2Ffree-icon%2Fgithub-logo_318-53553.jpg&f=1")
-        embed.set_footer(text="This is a footer")
+    async def create_embed(self, embed_title, embed_url, embed_description, embed_color, author_name, author_url, author_icon_url, thumbnail_url, footer_text=""):
+        embed = Embed(title=embed_title, url=embed_url, description=embed_description, color=embed_color)
+        embed.set_author(name=author_name, url=author_url, icon_url=author_icon_url)
+        embed.set_thumbnail(url=thumbnail_url)
+        embed.set_footer(text=footer_text)
         return embed
 
     async def add_field(self, embed, name, value, inline=True):

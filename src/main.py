@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 venv_file='venv/ceroxbot/bin/activate_this.py'
-execfile(venv_file, dict(__file__=venv_file))
+exec(compile(open(venv_file).read(), venv_file, 'exec'), dict(__file__=venv_file))
 
 from cxbot import CXBot
 from modules.exceptions import MissingServer

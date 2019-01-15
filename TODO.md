@@ -13,6 +13,7 @@
   - [x] logMessages
   - [x] logBotActivities
   - [x] logUserActivities
+  - [ ] deleteLogsAfter
   - [x] trackGameHistory
   - [x] trackGameStatistics
   - [x] autoCreateGameRoles
