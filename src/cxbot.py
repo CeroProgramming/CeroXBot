@@ -62,7 +62,9 @@ class CXBot(Client, Setup, Bot, Server, Channel, User, Role, Features, Base):
         print(event)
 
     async def on_message(self, message):
-        pass
+
+        if message.content.startswith(self.c.prefix):
+
 
     async def on_message_delete(self, message):
         pass  # Increase Clients max_messages for more cached messages
