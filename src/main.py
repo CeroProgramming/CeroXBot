@@ -1,6 +1,12 @@
-from bot import Bot
+#!/usr/bin/python3
 
-cxbot = Bot()
+venv_file='venv/ceroxbot/bin/activate_this.py'
+exec(compile(open(venv_file).read(), venv_file, 'exec'), dict(__file__=venv_file))
+
+from cxbot import CXBot
+from modules.exceptions import MissingServer
+
+cxbot = CXBot()
 
 try:
     cxbot.loop.run_until_complete(cxbot.start(cxbot.c.token))

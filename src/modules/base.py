@@ -1,190 +1,70 @@
-from os.path import isfile
+from .config import Config
+from .exceptions import MissingServer
 
-from configparser import ConfigParser
+from functools import wraps
 
 class Base(object):
 
     def __init__(self):
 
-        self.yes_alternatives = ['yes', 'Yes', 'y', 'Y', 'ja', 'Ja', 'j', 'J']
-        self.no_alternatives = ['no', 'No', 'n', 'N', 'nein', 'Nein']
+        super(Base, self).__init__()
 
-        self.optionsfp = 'config/options.cfg'
-        if not isfile(self.optionsfp):
-            self.options = ConfigParser()
-            self.options.add_section('Miscellaneous')
-            self.options.add_section('Properties')
-            language = -1
-            while not language in [0, 1]:
-                print('English[0] / Deutsch[1]')
-                language = int(input())
-                if language == 0:
-                    self.language = 'en'
-                elif language == 1:
-                    self.language = 'de'
-                else:
-                    print('Bad input..')
-            self.load_language(self.language)
-            print(self.glossary['modules.base.selected_language'])
+        self.c = Config()
 
-            clientid = str()
-            while not clientid.isdecimal():
-                print(self.glossary['modules.base.clientid'])
-                clientid = input()
-                if clientid.isdecimal():
-                    self.clientID = clientid
-                else:
-                    print(self.glossary['modules.base.badinput'])
+    def _server_names(self):
+        return [s.name for s in self.servers]
 
-            token = str()
-            while token == '':
-                print(self.glossary['modules.base.token'])
-                token = input()
-                if token != '':
-                    self.token = token
-                else:
-                    print(self.glossary['modules.base.badinput'])
+    async def _get_owner_by_id(self):
+        return await self.get_user_info(self.c.ownerID)
 
-            ownerid = str()
-            while not ownerid.isdecimal():
-                print(self.glossary['modules.base.ownerid'])
-                ownerid = input()
-                if ownerid.isdecimal():
-                    self.ownerID = ownerid
-                else:
-                    print(self.glossary['modules.base.badinput'])
-
-            self.firstStart = True
-
-            #print('Open https://discordapp.com/oauth2/authorize?client_id=%s&scope=bot&permissions=0 to add the bot to a server.' % self.clientID)
-
-            self.__write()
-
-
-        else:
-            self.options = ConfigParser()
-            self.__read()
-
-
-    def __read(self):
-        self.options.read(self.optionsfp)
-
-    def __write(self):
-        with open(self.optionsfp, 'w') as f:
-            self.options.write(f)
-
-
-    def load_language(self, language):
-        with open('lang/' + language + '.lang', 'r') as languagefile:
-            lines = languagefile.readlines()
-        self.glossary = dict()
-        for l in lines:
-            a, b = l.rstrip('\n').split('=')
-            self.glossary[a] = b
-
-
-    @property
-    def language(self):
-        self.__read()
-        return self.options.get('Miscellaneous', 'language')
-
-    @language.setter
-    def language(self, n):
-        self.options.set('Miscellaneous', 'language', n)
-        self.__write()
-
-    @property
-    def clientID(self):
-        self.__read()
-        return self.options.get('Miscellaneous', 'clientID')
-
-    @clientID.setter
-    def clientID(self, n):
-        self.options.set('Miscellaneous', 'clientID', n)
-        self.__write()
-
-    @property
-    def clientSecret(self):
-        self.__read()
-        return self.options.get('Miscellaneous', 'clientSecret')
-
-    @clientSecret.setter
-    def clientSecret(self, n):
-        self.options.set('Miscellaneous', 'clientSecret', n)
-        self.__write()
-
-    @property
-    def token(self):
-        self.__read()
-        return self.options.get('Miscellaneous', 'token')
-
-    @token.setter
-    def token(self, n):
-        self.options.set('Miscellaneous', 'token', n)
-        self.__write()
-
-    @property
-    def ownerID(self):
-        self.__read()
-        return self.options.get('Miscellaneous', 'ownerID')
-
-    @ownerID.setter
-    def ownerID(self, n):
-        self.options.set('Miscellaneous', 'ownerID', n)
-        self.__write()
-
-    @property
-    def firstStart(self):
-        self.__read()
-        r = self.options.get('Miscellaneous', 'firstStart')
-        if r == 'True':
+    async def _wait_for_bool(self, author):
+        message = await self.wait_for_message(timeout=None, author=author)
+        while message.content not in self.c.yes_alternatives and message.content not in self.c.no_alternatives:
+            await self.io_message(author, 'No valid message..')
+            message = await self.wait_for_message(timeout=None, author=author)
+        if message.content in self.c.yes_alternatives:
             return True
-        else:
+        elif message.content in self.c.no_alternatives:
             return False
 
-    @firstStart.setter
-    def firstStart(self, n):
-        if n:
-            self.options.set('Miscellaneous', 'firstStart', 'True')
-        else:
-            self.options.set('Miscellaneous', 'firstStart', 'False')
-        self.__write()
+    async def _wait_for_list(self, author, whitelist):
+        message = await self.wait_for_message(timeout=None, author=author)
+        while message.content not in whitelist:
+            await self.io_message(author, 'No valid message..')
+            message = await self.wait_for_message(timeout=None, author=author)
+        return message.content
 
-    @property
-    def nickname(self):
-        self.__read()
-        return self.options.get('Properties', 'nickname')
+    async def _wait_for_picture_url(self, author):
+        message = await self.wait_for_message(timeout=None, author=author)
+        while not message.attachments:
+            await self.io_message(author, 'No picture send..')
+            message = await self.wait_for_message(timeout=None, author=author)
+        return message.attachments[0]['url']
 
-    @nickname.setter
-    def nickname(self, n):
-        self.options.set('Properties', 'nickname', n)
-        self.__write()
+    async def _wait_for_number(self, author, mi, ma):
+        message = await self.wait_for_message(timeout=None, author=author)
+        b = True
+        while message.content.endswith(' '):
+            message.content = message.content[:-1]
+        if message.content.isdecimal():
+            if int(message.content) >= mi and int(message.content) <= ma:
+                b = False
+        while b:
+            await self.io_message(author, 'Message is no number or not in the range of %s and %s..' % (mi, ma))
+            message = await self.wait_for_message(timeout=None, author=author)
+            while message.content.endswith(' '):
+                message.content = message.content[:-1]
+            if message.content.isdecimal():
+                if int(message.content) >= mi and int(message.content) <= ma:
+                    b = False
+        return int(message.content)
 
-    @property
-    def autoSetNickname(self):
-        self.__read()
-        return self.options.get('Properties', 'autoSetNickname')
-
-
-    @autoSetNickname.setter
-    def autoSetNickname(self, n):
-        if n == '0':
-            self.options.set('Properties', 'autoSetNickname', 'never')
-        elif n == '1':
-            self.options.set('Properties', 'autoSetNickname', 'always')
-        elif n == '2':
-            self.options.set('Properties', 'autoSetNickname', 'once')
-        self.__write()
-
-
-
-
-
-
-
-
-
-
-
-if __name__ == '__main__':
-    b = Base()
+    def excep(func):
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            try:
+                return await func(self, *args, **kwargs)
+            except Exception as e:
+                print(e)
+                return
+        return wrapper
