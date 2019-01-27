@@ -62,7 +62,9 @@ class Setup(object):
             self.c.logMessages = await self._wait_for_bool(owner)
             await self.io_message(owner, 'Shall I also log all interactions between me and everything else? (No/Yes)')
             self.c.logBotActivities = await self._wait_for_bool(owner)
-            await self.io_message(owner, 'Shall I log all public available user data like online time and played games? (this may or may not generate huge amounts of data) (No/Yes)')
+            await self.io_message(owner, 'Shall I also server related stuff like a member joined? (No/Yes)')
+            self.c.logBotActivities = await self._wait_for_bool(owner)
+            await self.io_message(owner, 'Shall I also log all public available user data like online time and played games? (this may or may not generate huge amounts of data) (No/Yes)')
             self.c.logUserActivities = await self._wait_for_bool(owner)
         else:
             self.c.logMessages = False

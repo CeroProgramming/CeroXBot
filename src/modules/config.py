@@ -1019,6 +1019,19 @@ class Config(object):
         self.__write()
 
     @property
+    def logServerActivities(self):
+        self.__read()
+        return True if self.options.get('Logging', 'logServerActivities') == 'True' else False
+
+    @logServerActivities.setter
+    def logServerActivities(self, n):
+        if n:
+            self.options.set('Logging', 'logServerActivities', 'True')
+        else:
+            self.options.set('Logging', 'logServerActivities', 'False')
+        self.__write()
+
+    @property
     def logUserActivities(self):
         self.__read()
         return True if self.options.get('Logging', 'logUserActivities') == 'True' else False

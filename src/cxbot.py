@@ -75,27 +75,29 @@ class CXBot(Client, Setup, Bot, IO, Server, Channel, User, Role, Features, Base)
     async def on_message(self, message):
 
         if self.c.logMessages:
-            self.logger.log_message(message)
+            await self.logger.log_message(message)
 
         if self.busy:
             return
 
-        if not message.author == self.user:
+        if not message.author.id == self.user.id:
             print(message.content)
-            e = await self.create_embed("Github CeroProgramming", "https://github.com/CeroProgramming", "GitHub Profile URL", Color.dark_purple(), "CeroProgramming", "https://github.com/CeroProgramming/", "https://avatars3.githubusercontent.com/u/22818389?s=460&v=4", "https://proxy.duckduckgo.com/iu/?u=https%3A%2F%2Fimage.freepik.com%2Ffree-icon%2Fgithub-logo_318-53553.jpg&f=1")
-            await self.io_embed(message.channel, e)
 
-        if message.content == "shutdown":
+        if message.content == "shutdown" and message.channel.is_private:
             await self.shutdown()
 
     async def on_message_delete(self, message):
-        pass  # Increase Clients max_messages for more cached messages
+        pass
+        # Increase Clients max_messages for more cached messages
 
+    @Base.excep
     async def on_message_edit(self, before, after):
+
+        print(after.content)
 
         if self.c.logMessages:
             if before.content != after.content or before.embeds != after.embeds or before.attachments != after.attachments:
-                self.logger.log_message_change(before, after)
+                await self.logger.log_message_change(before, after)
 
     async def on_reaction_add(self, reaction, user):
         pass
@@ -115,11 +117,17 @@ class CXBot(Client, Setup, Bot, IO, Server, Channel, User, Role, Features, Base)
     async def on_channel_update(self, before, after):
         pass
 
+    @Base.excep
     async def on_member_join(self, member):
-        pass
 
+        if self.c.logServerActivities:
+            await self.logger.log_server_join(member)
+
+    @Base.excep
     async def on_member_remove(self, member):
-        pass
+
+        if self.c.logServerActivities:
+            await self.logger.log_server_leave(member)
 
     async def on_member_update(self, before, after):
         pass
@@ -169,6 +177,6 @@ class CXBot(Client, Setup, Bot, IO, Server, Channel, User, Role, Features, Base)
     async def on_group_remove(self, channel, user):
         pass
 
-    async def shutdown(self):  # TODO Test
+    async def shutdown(self):
         await self.logout()
         await self.close()
