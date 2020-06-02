@@ -1,6 +1,6 @@
-# NextBot – Administrate discord in a new easy way
+# CeroXBot (aka NextBot) – Administrate discord with a bot
 
-!!WARNING!! The code isn't written clean. There will be a rewriting of the whole source code after I implemented the role management and some little features.
+## DEPRECATED - The discord api has changed over the time. I started rewriting the bot on the master branch but since I'm now a full-time student and do not use Discord so often anymore, I cannot spend the time to finish it. If you are interested, feel free to fork it or create a pull request
 
 The NextBot is a bot for discord written in Python, that tries to make Discord server administration as easy as possible.
 The bot is coded by a student of the 12th grade in germany. It is a combination of the MusicBot written by SexualRhinoceros,
